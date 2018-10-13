@@ -17,5 +17,5 @@ This is a project to learn different s2s model based on Tensorflow keras api
 - Adversarial Transformer model
 
 ### References
-- ("Attention in All You Need")[https://arxiv.org/abs/1706.03762]
-- ("Attention? Attention!")[https://lilianweng.github.io/lil-log/2018/06/24/attention-attention.html]
+- ["Attention? Attention!"](https://lilianweng.github.io/lil-log/2018/06/24/attention-attention.html)
+- ["Attention in All You Need"](https://arxiv.org/abs/1706.03762)
