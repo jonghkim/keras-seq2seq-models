@@ -9,7 +9,6 @@ This is a project to learn different s2s model based on Tensorflow keras api
     - RNN encoder and decoder model
     - Bi-directional RNN encoder and decoder 
     - Bi-directional RNN encoder and decoder with attention mechanism
-
 - Pointer-Generator model
 - Transformer model
 - Adversarial seq2seq model
