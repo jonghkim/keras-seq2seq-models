@@ -11,20 +11,10 @@ This is a project to learn different s2s model based on Tensorflow keras api.
     - Bi-directional RNN encoder and decoder with attention mechanism
 
 - Pointer-Generator model
-    - Copy mechanism
-
 - Transformer model
 - Adversarial seq2seq model
 - Adversarial Pointer-Generator seq2seq model
 - Adversarial Transformer model
-
-## Structure
-
-### Encoder
-### Decoder
-### Attention
-- Bahdanau
-- Luong
 
 ### References
 - ("Attention in All You Need")[https://arxiv.org/abs/1706.03762]
