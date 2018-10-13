@@ -2,7 +2,7 @@
 
 *Work-in-Progress*
 
-This is a project to learn different s2s model based on Tensorflow keras api.
+This is a project to learn different s2s model based on Tensorflow keras api
 
 ## Models
 - Vanilla seq2seq model
