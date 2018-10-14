@@ -68,7 +68,7 @@ class Seq2SeqModel():
         encoder_inputs_placeholder = Input(shape=(self.max_len_input,))
         x = embedding_layer(encoder_inputs_placeholder)
         encoder = LSTM(
-            LATENT_DIM,
+            self.config.LATENT_DIM,
             return_state=True,
             # dropout=0.5 # dropout not available on gpu
         )
