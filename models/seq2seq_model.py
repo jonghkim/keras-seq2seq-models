@@ -52,7 +52,7 @@ class Seq2SeqModel():
             for t, word in enumerate(d):
                 self.decoder_targets_one_hot[i, t, word] = 1
 
-        print('Set Data Finished')
+        print('---- Set Data Finished ----')
 
     def build_model(self):
         # create embedding layer
@@ -122,7 +122,7 @@ class Seq2SeqModel():
 
         self.model = model
 
-        print('Build Model Finished')
+        print('---- Build Model Finished ----')
     
     def train_model(self):
 
@@ -130,10 +130,10 @@ class Seq2SeqModel():
             [self.encoder_inputs, self.decoder_inputs], self.decoder_targets_one_hot,
             batch_size=self.config.BATCH_SIZE,
             epochs=self.config.EPOCHS,
-            validation_split=self.config.VALIDATION_SPLIT,
+            validation_split=0.2,
         )
 
-        print('Train Model Finished')
+        print('---- Train Model Finished ----')
 
 
     def save_model(self, SAVE_PATH):
