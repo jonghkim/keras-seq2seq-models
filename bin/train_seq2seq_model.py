@@ -6,7 +6,7 @@ from models.seq2seq_model import S2SModel
 if __name__ == "__main__":
 
     config = VanillaConfig()
-    DATA_PATH = '../toy_data/translation/kor.txt'
+    DATA_PATH = 'toy_data/translation/kor.txt'
     WORD2VEC_PATH = '/data/pretrained_model/word_embedding/glove.6B/glove.6B.%sd.txt' % config.EMBEDDING_DIM
 
     print(config)
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     model.build_model()    
     #### train model ####
     model.train_model()
-    
+
     #### save model ####
 
 
