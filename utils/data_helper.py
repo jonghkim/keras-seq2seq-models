@@ -1,5 +1,7 @@
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
 
-def read_txt(DATA_PATH):
+def read_txt(DATA_PATH, NUM_SAMPLES):
     # Where we will store the data
     input_texts = [] # sentence in original language
     target_texts = [] # sentence in target language

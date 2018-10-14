@@ -14,7 +14,7 @@ if __name__ == "__main__":
     print("Word2Vec Path: ", WORD2VEC_PATH)
 
     #### load the data ####    
-    input_texts, target_texts, target_texts_inputs = data_helper.read_txt(DATA_PATH)
+    input_texts, target_texts, target_texts_inputs = data_helper.read_txt(DATA_PATH, config.NUM_SAMPLES)
     #### tokenize the inputs, outputs ####
     encoder_inputs, decoder_inputs, decoder_targets, \
      word2idx_inputs, word2idx_outputs, \
