@@ -15,7 +15,7 @@ if len(K.tensorflow_backend._get_available_gpus()) > 0:
 
 from models.config import VanillaConfig
 
-class S2SModel():
+class Seq2SeqModel():
 
     def __init__(self, config=VanillaConfig()):
         assert config.mode in ["train", "eval", "inference"]
