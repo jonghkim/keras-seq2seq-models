@@ -4,6 +4,9 @@
 
 This is a project to learn different s2s model based on Tensorflow keras api
 
+## Data
+- get the data at: http://www.manythings.org/anki/
+
 ## Models
 - Vanilla seq2seq model
     - RNN encoder and decoder model
