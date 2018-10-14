@@ -87,7 +87,7 @@ class S2SModel():
 
         # this word embedding will not use pre-trained vectors
         # although you could
-        decoder_embedding = Embedding(num_words_output, self.config.LATENT_DIM)
+        decoder_embedding = Embedding(self.num_words_output, self.config.LATENT_DIM)
         decoder_inputs_x = decoder_embedding(decoder_inputs_placeholder)
 
         # since the decoder is a "to-many" model we want to have
