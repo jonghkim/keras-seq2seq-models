@@ -13,11 +13,11 @@ def read_txt(DATA_PATH):
         # only keep a limited number of samples
         t += 1
         if t > NUM_SAMPLES:
-        break
+            break
 
         # input and target are separated by tab
         if '\t' not in line:
-        continue
+            continue
 
         # split up the input and translation
         input_text, translation = line.rstrip().split('\t')
@@ -105,7 +105,7 @@ def create_embedding_matrix(word2vec, word2idx_inputs, MAX_NUM_WORDS):
     if i < MAX_NUM_WORDS:
         embedding_vector = word2vec.get(word)
         if embedding_vector is not None:
-        # words not found in embedding index will be all zeros.
-        embedding_matrix[i] = embedding_vector
+            # words not found in embedding index will be all zeros.
+            embedding_matrix[i] = embedding_vector
 
     return embedding_matrix
