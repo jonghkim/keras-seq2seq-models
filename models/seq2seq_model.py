@@ -18,7 +18,7 @@ from models.config import VanillaConfig
 class Seq2SeqModel():
 
     def __init__(self, config=VanillaConfig()):
-        assert config.mode in ["train", "eval", "inference"]
+        assert config.MODE in ["train", "eval", "inference"]
         self.train_phase = config.mode == "train"
         self.config = config
 
