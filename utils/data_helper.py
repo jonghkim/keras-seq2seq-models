@@ -78,8 +78,8 @@ def create_vocab(input_texts, target_texts, target_texts_inputs, MAX_NUM_WORDS):
 
     decoder_targets = pad_sequences(target_sequences, maxlen=max_len_target, padding='post')
 
-    return encoder_inputs, decoder_inputs, decoder_targets, word2idx_inputs, \ 
-            word2idx_outputs, max_len_input, max_len_target, num_words_output
+    return (encoder_inputs, decoder_inputs, decoder_targets, word2idx_inputs, 
+            word2idx_outputs, max_len_input, max_len_target, num_words_output)
 
 def load_word2vec(WORD2VEC_PATH):
     # store all the pre-trained word vectors
@@ -102,10 +102,10 @@ def create_embedding_matrix(word2vec, word2idx_inputs, MAX_NUM_WORDS):
     num_words = min(MAX_NUM_WORDS, len(word2idx_inputs) + 1)
     embedding_matrix = np.zeros((num_words, EMBEDDING_DIM))
     for word, i in word2idx_inputs.items():
-    if i < MAX_NUM_WORDS:
-        embedding_vector = word2vec.get(word)
-        if embedding_vector is not None:
-            # words not found in embedding index will be all zeros.
-            embedding_matrix[i] = embedding_vector
+        if i < MAX_NUM_WORDS:
+            embedding_vector = word2vec.get(word)
+            if embedding_vector is not None:
+                # words not found in embedding index will be all zeros.
+                embedding_matrix[i] = embedding_vector
 
     return embedding_matrix
