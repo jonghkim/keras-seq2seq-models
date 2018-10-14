@@ -39,8 +39,8 @@ class DataHelper():
             target_texts_inputs.append(target_text_input)
 
         print("num samples:", len(input_texts))
-
-        return input_text, target_texts, target_texts_inputs
+        
+        return input_texts, target_texts, target_texts_inputs
 
     def create_vocab(self, input_texts, target_texts, target_texts_inputs):
         # tokenize the inputs

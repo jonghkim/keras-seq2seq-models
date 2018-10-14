@@ -15,17 +15,20 @@ if __name__ == "__main__":
     print("Data Path: ", DATA_PATH)
     print("Word2Vec Path: ", WORD2VEC_PATH)
 
-    #### load the data #### 
     data_helper = DataHelper(config)
 
+    #### load the data #### 
     input_texts, target_texts, target_texts_inputs = data_helper.read_txt(DATA_PATH)
+
     #### tokenize the inputs, outputs ####
     encoder_inputs, decoder_inputs, decoder_targets, \
      word2idx_inputs, word2idx_outputs, \
      max_len_input, max_len_target, num_words_output = \
                          data_helper.create_vocab(input_texts, target_texts, target_texts_inputs)
+
     #### load word2vec pretrained model ####
     word2vec = data_helper.load_word2vec(WORD2VEC_PATH)
+    
     #### create embedding matrix ####
     embedding_matrix = data_helper.create_embedding_matrix(word2vec, word2idx_inputs)
     
