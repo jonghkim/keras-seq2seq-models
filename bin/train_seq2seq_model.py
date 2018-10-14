@@ -1,4 +1,6 @@
 import os, sys
+import numpy as np
+
 from utils import data_helper
 from models.config import VanillaConfig
 from models.seq2seq_model import S2SModel

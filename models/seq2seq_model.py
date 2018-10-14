@@ -1,9 +1,9 @@
 import os, sys
+import numpy as np
 
 from keras.models import Model
 from keras.layers import Input, LSTM, GRU, Dense, Embedding
 from keras.utils import to_categorical
-import numpy as np
 
 #import matplotlib.pyplot as plt
 #%matplotlib inline

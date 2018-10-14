@@ -1,5 +1,7 @@
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
+import numpy as np
+import os, sys
 
 def read_txt(DATA_PATH, NUM_SAMPLES):
     # Where we will store the data
