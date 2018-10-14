@@ -11,7 +11,7 @@ if __name__ == "__main__":
     DATA_PATH = 'toy_data/translation/kor.txt'
     WORD2VEC_PATH = '/data/pretrained_model/word_embedding/glove.6B/glove.6B.%sd.txt' % config.EMBEDDING_DIM
 
-    print(config)
+    print(repr(config))
     print("Data Path: ", DATA_PATH)
     print("Word2Vec Path: ", WORD2VEC_PATH)
 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     #### load word2vec pretrained model ####
     word2vec = data_helper.load_word2vec(WORD2VEC_PATH)
-    
+
     #### create embedding matrix ####
     embedding_matrix = data_helper.create_embedding_matrix(word2vec, word2idx_inputs)
     
