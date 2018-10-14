@@ -2,20 +2,20 @@ import os, sys
 import numpy as np
 
 from utils.data_helper import DataHelper
-from models.config import VanillaConfig
-from models.seq2seq_model import Seq2SeqModel
+from models.config import AttnConfig
+from models.seq2seq_model_attn import Seq2SeqAttnModel
 
 if __name__ == "__main__":
 
-    config = VanillaConfig()
+    config = AttnConfig()
     DATA_PATH = 'toy_data/translation/kor.txt'
     WORD2VEC_PATH = '/data/pretrained_model/word_embedding/glove.6B/glove.6B.%sd.txt' % config.EMBEDDING_DIM
-    LOAD_PATH = 'bin/checkpoints/seq2seq_model.h5'
+    SAVE_PATH = 'bin/checkpoints/seq2seq_model.h5'
 
     print(repr(config))
     print("Data Path: ", DATA_PATH)
     print("Word2Vec Path: ", WORD2VEC_PATH)
-    print("Save Path: ", LOAD_PATH)
+    print("Save Path: ", SAVE_PATH)
 
     data_helper = DataHelper(config)
 
@@ -28,10 +28,14 @@ if __name__ == "__main__":
      max_len_input, max_len_target, num_words_output = \
                          data_helper.create_vocab(input_texts, target_texts, target_texts_inputs)
 
+    #### load word2vec pretrained model ####
+    word2vec = data_helper.load_word2vec(WORD2VEC_PATH)
+
+    #### create embedding matrix ####
+    embedding_matrix = data_helper.create_embedding_matrix(word2vec, word2idx_inputs)
+    
     #### set data of model ####
-    model = Seq2SeqModel(config)
+    model = Seq2SeqAttnModel(config)
     model.set_data(encoder_inputs, decoder_inputs, decoder_targets,
                     max_len_input, max_len_target, num_words_output, word2idx_inputs, word2idx_outputs)
-
-    model.predict_build_model(LOAD_PATH)
-    model.predict(input_texts)
+    model.set_embedding_matrix(embedding_matrix)    
