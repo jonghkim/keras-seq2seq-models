@@ -139,4 +139,4 @@ class Seq2SeqModel():
     def save_model(self, SAVE_PATH):
         # Save model
         self.model.save(SAVE_PATH)
-    
+        

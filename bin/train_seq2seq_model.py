@@ -10,10 +10,12 @@ if __name__ == "__main__":
     config = VanillaConfig()
     DATA_PATH = 'toy_data/translation/kor.txt'
     WORD2VEC_PATH = '/data/pretrained_model/word_embedding/glove.6B/glove.6B.%sd.txt' % config.EMBEDDING_DIM
+    SAVE_PATH = 'bin/checkpoints/seq2seq_model.h5'
 
     print(repr(config))
     print("Data Path: ", DATA_PATH)
     print("Word2Vec Path: ", WORD2VEC_PATH)
+    print("Save Path: ", SAVE_PATH)
 
     data_helper = DataHelper(config)
 
@@ -40,7 +42,6 @@ if __name__ == "__main__":
     model.build_model()    
     #### train model ####
     model.train_model()
-
     #### save model ####
-
+    model.save_model(SAVE_PATH)
 

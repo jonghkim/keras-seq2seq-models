@@ -5,3 +5,4 @@ notebooks/*
 **.csv
 **.pkl
 **.pickle
+bin/checkpoints/*
