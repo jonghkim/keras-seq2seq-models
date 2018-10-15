@@ -6,7 +6,11 @@ from keras.layers import Input, LSTM, GRU, Dense, Embedding, \
         Bidirectional, RepeatVector, Concatenate, Activation, Dot, Lambda
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
+
+from keras.models import load_model
+
 import keras.backend as K
+
 import numpy as np
 
 if len(K.tensorflow_backend._get_available_gpus()) > 0:
@@ -214,3 +218,76 @@ class Seq2SeqAttnModel():
                         epochs=self.config.EPOCHS,
                         validation_split=0.2
                         )
+
+    def save_model(self, SAVE_PATH):
+        self.model.save(SAVE_PATH)
+
+    def predict_build_model(self, LOAD_PATH):
+        """
+        fix model loading part
+        """
+        # load model
+        self.model = load_model(LOAD_PATH)
+        pass
+
+    def decode_sequence(self, input_seq):
+        # Encode the input as state vectors.
+        enc_out = self.encoder_model.predict(input_seq)
+
+        # Generate empty target sequence of length 1.
+        target_seq = np.zeros((1, 1))
+
+        # Populate the first character of target sequence with the start character.
+        # NOTE: tokenizer lower-cases all words
+        target_seq[0, 0] = self.word2idx_outputs['<sos>']
+
+        # if we get this we break
+        eos = self.word2idx_outputs['<eos>']
+
+
+        # [s, c] will be updated in each loop iteration
+        s = np.zeros((1, self.config.LATENT_DIM_DECODER))
+        c = np.zeros((1, self.config.LATENT_DIM_DECODER))
+
+
+        # Create the translation
+        output_sentence = []
+        for _ in range(self.max_len_target):
+            o, s, c = self.decoder_model.predict([target_seq, enc_out, s, c])
+                
+
+            # Get next word
+            idx = np.argmax(o.flatten())
+
+            # End sentence of EOS
+            if eos == idx:
+                break
+
+            word = ''
+            if idx > 0:
+                word = self.idx2word_trans[idx]
+                output_sentence.append(word)
+
+            # Update the decoder input
+            # which is just the word just generated
+            target_seq[0, 0] = idx
+
+        return ' '.join(output_sentence)
+
+    def predict(self, input_texts, target_texts):
+        # map indexes back into real words
+        # so we can view the results
+
+        while True:
+            # Do some test translations
+            i = np.random.choice(len(input_texts))
+            input_seq = self.encoder_inputs[i:i+1]
+            translation = self.decode_sequence(input_seq)
+            print('-')
+            print('Input sentence:', input_texts[i])
+            print('Predicted translation:', translation)
+            print('Actual translation:', target_texts[i])
+
+            ans = input("Continue? [Y/n]")
+            if ans and ans.lower().startswith('n'):
+                break

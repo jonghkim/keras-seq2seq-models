@@ -6,10 +6,8 @@ from keras.layers import Input, LSTM, GRU, Dense, Embedding
 from keras.utils import to_categorical
 from keras.models import load_model
 
-#import matplotlib.pyplot as plt
-#%matplotlib inline
-
 import keras.backend as K
+
 if len(K.tensorflow_backend._get_available_gpus()) > 0:
     from keras.layers import CuDNNLSTM as LSTM
     from keras.layers import CuDNNGRU as GRU
