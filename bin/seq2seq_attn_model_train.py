@@ -3,7 +3,7 @@ import numpy as np
 
 from utils.data_helper import DataHelper
 from models.config import AttnConfig
-from models.seq2seq_model_attn import Seq2SeqAttnModel
+from models.seq2seq_attn_model import Seq2SeqAttnModel
 
 if __name__ == "__main__":
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     model.set_data(encoder_inputs, decoder_inputs, decoder_targets,
                     max_len_input, max_len_target, num_words_output, word2idx_inputs, word2idx_outputs)
     model.set_embedding_matrix(embedding_matrix)    
-    
+
     #### build model ####
     model.build_model()    
     #### train model ####
