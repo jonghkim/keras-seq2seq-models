@@ -163,7 +163,7 @@ class Seq2SeqAttnModel():
         outputs = []
         for t in range(self.max_len_target): # Ty times
             # get the context using attention
-            context = sone_step_attention(encoder_outputs, s)
+            context = one_step_attention(encoder_outputs, s)
 
             # we need a different layer for each time step
             selector = Lambda(lambda x: x[:, t:t+1])
