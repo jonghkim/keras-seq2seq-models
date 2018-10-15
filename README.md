@@ -2,7 +2,7 @@
 
 *Work-in-Progress*
 
-This is a project to learn different s2s models based on Keras
+This is a project to learn different s2s models based on Keras Functional API
 
 ## Data
 - get the data at: http://www.manythings.org/anki/
