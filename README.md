@@ -10,8 +10,8 @@ This is a project to learn different s2s models based on Keras
 ## Models
 - Vanilla seq2seq model
 - Vanilla seq2seq model with attention mechanism
+- Pointer network model
 - Pointer-Generator model
-- Transformer model
 
 ## Usage
 ~~~
@@ -28,4 +28,3 @@ python -m bin.seq2seq_attn_model_test
 - [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215), 2014.
 - [Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation](https://arxiv.org/abs/1406.1078), 2014.
 - [Get To The Point: Summarization with Pointer-Generator Networks](https://arxiv.org/abs/1704.04368), 2017.
-- [Attention in All You Need](https://arxiv.org/abs/1706.03762), 2017.
