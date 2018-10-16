@@ -225,8 +225,7 @@ class Seq2SeqModel():
             # Get next word
             idxs = np.argmax(output_tokens, axis=2)
             idxs = idxs.reshape(-1)
-            output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE)]
-
+            
             ## End sentence of EOS
             if sum(idxs == eos) == len(idxs):
                 break
@@ -260,7 +259,7 @@ class Seq2SeqModel():
                 print('Input:', input_texts[i+j])
                 print('Translation:', ' '.join(translations[j]))
                 print('Actual translation:', target_texts[i+j])
-                
+
             ans = input("Continue? [Y/n]")
             if ans and ans.lower().startswith('n'):
                 break
