@@ -26,6 +26,10 @@ python -m bin.seq2seq_model_test
 # For seq2seq with attention mechanism model
 python -m bin.seq2seq_attn_model_train
 python -m bin.seq2seq_attn_model_test
+
+# For vanilla seq2seq model with adversarial network and style embedding (work-in-progress)
+python -m bin.seq2seq_adv_style_model_train
+python -m bin.seq2seq_adv_style_model_test
 ~~~
 
 ### References
