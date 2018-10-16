@@ -20,7 +20,7 @@ if __name__ == "__main__":
     data_helper = DataHelper(config)
 
     #### load the data #### 
-    input_texts, target_texts, target_texts_inputs = data_helper.read_txt(DATA_PATH)
+    input_texts, target_texts, target_texts_inputs = data_helper.read_txt_translation(DATA_PATH)
 
     #### tokenize the inputs, outputs ####
     encoder_inputs, decoder_inputs, decoder_targets, \

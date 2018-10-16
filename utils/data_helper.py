@@ -7,7 +7,7 @@ class DataHelper():
     def __init__(self, config):
         self.config = config
 
-    def read_txt(self, DATA_PATH):
+    def read_txt_translation(self, DATA_PATH):
         # Where we will store the data
         input_texts = [] # sentence in original language
         target_texts = [] # sentence in target language
@@ -41,6 +41,49 @@ class DataHelper():
         print("num samples:", len(input_texts))
         
         return input_texts, target_texts, target_texts_inputs
+
+    def read_txt_sentiment(self, NEG_DATA_PATH, POS_DATA_PATH):
+        # Where we will store the data
+        neg_texts = [] # sentence in original language
+        pos_texts = [] # sentence in target language
+        styles = []
+
+        # load in the data
+        # download the data at: http://www.manythings.org/anki/
+        t = 0
+        for line in open(NEG_DATA_PATH):
+            # only keep a limited number of samples
+            t += 1
+            if t > self.config.NUM_SAMPLES:
+                break
+            # split up the input and translation
+            neg_text = line.rstrip()
+            neg_texts.append(neg_text)
+            styles.append(0)
+                
+        t = 0    
+        for line in open(POS_DATA_PATH):
+            # only keep a limited number of samples
+            t += 1
+            if t > self.config.NUM_SAMPLES:
+                break
+            # split up the input and translation
+            pos_text = line.rstrip()
+            pos_texts.append(pos_text)
+            styles.append(1)
+            
+        print("num samples:", len(neg_texts)+len(pos_texts))
+
+        input_texts = neg_texts + pos_texts
+
+        target_texts = []
+        target_texts_inputs = []
+
+        for input_text in input_texts:
+            target_texts.append(input_text+' <eos>')
+            target_texts_inputs.append('<sos> ' + input_text)    
+        
+        return input_texts, target_texts, target_texts_inputs, styles
 
     def create_vocab(self, input_texts, target_texts, target_texts_inputs):
         # tokenize the inputs
