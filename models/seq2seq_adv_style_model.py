@@ -14,8 +14,7 @@ if len(K.tensorflow_backend._get_available_gpus()) > 0:
 
 from models.config import AdvStyleConfig
 
-class Seq2SeqModel():
-
+class Seq2SeqAdvStyleModel():
     def __init__(self, config=AdvStyleConfig()):
         assert config.MODE in ["train", "eval", "inference"]
         self.train_phase = config.MODE == "train"
