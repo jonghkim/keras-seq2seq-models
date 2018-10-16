@@ -197,65 +197,70 @@ class Seq2SeqModel():
                             [decoder_outputs] + decoder_states
                             )
 
-    def decode_sequence(self, input_seq):
+    def decode_sequence(self, input_seqs):
         # Encode the input as state vectors.
-        states_value = self.encoder_model.predict(input_seq)
+        states_values = self.encoder_model.predict(input_seqs)
 
         # Generate empty target sequence of length 1.
-        target_seq = np.zeros((1, 1))
+        target_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE, 1))
 
         # Populate the first character of target sequence with the start character.
         # NOTE: tokenizer lower-cases all words
-        target_seq[0, 0] = self.word2idx_outputs['<sos>']
+        for i in range(self.config.PREDICTION_BATCH_SIZE):
+            target_seqs[i, 0] = self.word2idx_outputs['<sos>']
 
         # if we get this we break
         eos = self.word2idx_outputs['<eos>']
 
         # Create the translation
-        output_sentence = []
+        output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE)]
         for _ in range(self.max_len_target):
             output_tokens, h, c = self.decoder_model.predict(
-                                    [target_seq] + states_value
+                                    [target_seqs] + states_values
                                     )
             # output_tokens, h = decoder_model.predict(
             #     [target_seq] + states_value
             # ) # gru
 
             # Get next word
-            idx = np.argmax(output_tokens[0, 0, :])
+            idxs = np.argmax(output_tokens, axis=2)
+            idxs = idxs.reshape(-1)
+            output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE)]
 
-            # End sentence of EOS
-            if eos == idx:
+            ## End sentence of EOS
+            if sum(idxs == eos) == len(idxs):
                 break
 
-            word = ''
-            if idx > 0:
-                word = self.idx2word_trans[idx]
-                output_sentence.append(word)
-
-            # Update the decoder input
-            # which is just the word just generated
-            target_seq[0, 0] = idx
+            for i in range(self.config.PREDICTION_BATCH_SIZE):
+                word = ''
+                if (idxs[i] > 0) and (idxs[i] !=eos):
+                    word = self.idx2word_trans[idxs[i]]
+                    output_sentences[i].append(word)
+                # Update the decoder input
+                # which is just the word just generated
+                target_seqs[i, 0] = idxs[i]
 
             # Update states
-            states_value = [h, c]
+            states_values = [h, c]
             # states_value = [h] # gru
 
-        return ' '.join(output_sentence)
+        return output_sentences
 
-    def predict(self, input_texts):
+    def predict(self, input_texts, target_texts):
         # map indexes back into real words
         # so we can view the results
 
         while True:
             # Do some test translations
-            i = np.random.choice(len(input_texts))
-            input_seq = self.encoder_inputs[i:i+1]
-            translation = self.decode_sequence(input_seq)
-            print('-')
-            print('Input:', input_texts[i])
-            print('Translation:', translation)
-
+            i = np.random.choice(len(input_texts)-self.config.PREDICTION_BATCH_SIZE+1)
+            input_seqs = self.encoder_inputs[i:i+self.config.PREDICTION_BATCH_SIZE]
+            translations = self.decode_sequence(input_seqs)
+            for j in range(self.config.PREDICTION_BATCH_SIZE):
+                print('-')            
+                print('Input:', input_texts[i+j])
+                print('Translation:', ' '.join(translations[j]))
+                print('Actual translation:', target_texts[i+j])
+                
             ans = input("Continue? [Y/n]")
             if ans and ans.lower().startswith('n'):
                 break

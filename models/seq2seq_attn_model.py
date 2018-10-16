@@ -7,6 +7,8 @@ from keras.layers import Input, LSTM, GRU, Dense, Embedding, \
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 
+from keras.activations import softmax
+
 from keras.models import load_model
 
 import keras.backend as K
@@ -72,11 +74,8 @@ class Seq2SeqAttnModel():
         # make sure we do softmax over the time axis
         # expected shape is N x T x D
         # note: the latest version of Keras allows you to pass in axis arg
-        def softmax_over_time(x):
-            assert(K.ndim(x) > 2)
-            e = K.exp(x - K.max(x, axis=1, keepdims=True))
-            s = K.sum(e, axis=1, keepdims=True)
-            return e / s
+        def soft_max_axis1(x):
+            return softmax(x, axis=1)
 
         def stack_and_transpose(x):
             # x is a list of length T, each element is a batch_size x output_vocab_size tensor
@@ -141,7 +140,7 @@ class Seq2SeqAttnModel():
         attn_repeat_layer = RepeatVector(self.max_len_input)
         attn_concat_layer = Concatenate(axis=-1)
         attn_dense1 = Dense(10, activation='tanh')
-        attn_dense2 = Dense(1, activation=softmax_over_time)
+        attn_dense2 = Dense(1, activation=soft_max_axis1)
         attn_dot = Dot(axes=1) # to perform the weighted sum of alpha[t] * h[t]
 
         # define the rest of the decoder (after attention)
@@ -227,52 +226,123 @@ class Seq2SeqAttnModel():
         fix model loading part
         """
         # load model
-        self.model = load_model(LOAD_PATH)
-        pass
+        def soft_max_axis1(x):
+            return softmax(x, axis=1)
 
-    def decode_sequence(self, input_seq):
+        def one_step_attention(h, st_1):
+            # h = h(1), ..., h(Tx), shape = (Tx, LATENT_DIM * 2)
+            # st_1 = s(t-1), shape = (LATENT_DIM_DECODER,)
+
+            # copy s(t-1) Tx times
+            # now shape = (Tx, LATENT_DIM_DECODER)
+            st_1 = attn_repeat_layer(st_1)
+
+            # Concatenate all h(t)'s with s(t-1)
+            # Now of shape (Tx, LATENT_DIM_DECODER + LATENT_DIM * 2)
+            x = attn_concat_layer([h, st_1])
+
+            # Neural net first layer
+            x = attn_dense1(x)
+
+            # Neural net second layer with special softmax over time
+            alphas = attn_dense2(x)
+
+            # "Dot" the alphas and the h's
+            # Remember a.dot(b) = sum over a[t] * b[t]
+            context = attn_dot([alphas, h])
+
+            return context
+
+        context_last_word_concat_layer = Concatenate(axis=2)
+        attn_repeat_layer = RepeatVector(self.max_len_input)
+        attn_concat_layer = Concatenate(axis=-1)
+        attn_dense1 = Dense(10, activation='tanh')
+        attn_dense2 = Dense(1, activation=soft_max_axis1)
+        attn_dot = Dot(axes=1) # to perform the weighted sum of alpha[t] * h[t]
+        
+        t = 0
+
+        self.model = load_model(LOAD_PATH,
+                                custom_objects={'soft_max_axis1': soft_max_axis1, 't': t})
+
+        encoder_inputs_placeholder = self.model.input[0]
+        encoder_outputs = self.model.layers[3].output
+        decoder_embedding = self.model.layers[9]
+
+        initial_s = self.model.layers[2].output
+        initial_c = self.model.layers[13].output
+
+        decoder_lstm = self.model.layers[14]
+        decoder_dense = self.model.layers[24]
+
+        self.encoder_model = Model(encoder_inputs_placeholder, encoder_outputs)
+
+        # next we define a T=1 decoder model
+        encoder_outputs_as_input = Input(shape=(self.max_len_input, self.config.LATENT_DIM * 2,))
+        decoder_inputs_single = Input(shape=(1,))
+        decoder_inputs_single_x = decoder_embedding(decoder_inputs_single)
+
+        # no need to loop over attention steps this time because there is only one step
+        context = one_step_attention(encoder_outputs_as_input, initial_s)
+
+        # combine context with last word
+        decoder_lstm_input = context_last_word_concat_layer([context, decoder_inputs_single_x])
+
+        # lstm and final dense
+        o, s, c = decoder_lstm(decoder_lstm_input, initial_state=[initial_s, initial_c])
+        decoder_outputs = decoder_dense(o)
+
+        self.decoder_model = Model(
+                        inputs=[
+                            decoder_inputs_single,
+                            encoder_outputs_as_input,
+                            initial_s, 
+                            initial_c
+                        ],
+                        outputs=[decoder_outputs, s, c]
+                        )
+
+    def decode_sequence(self, input_seqs):
         # Encode the input as state vectors.
-        enc_out = self.encoder_model.predict(input_seq)
 
+        enc_outs = self.encoder_model.predict(input_seqs)
         # Generate empty target sequence of length 1.
-        target_seq = np.zeros((1, 1))
+        target_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE, 1))
 
         # Populate the first character of target sequence with the start character.
         # NOTE: tokenizer lower-cases all words
-        target_seq[0, 0] = self.word2idx_outputs['<sos>']
+        for i in range(self.config.PREDICTION_BATCH_SIZE):
+            target_seqs[i, 0] = self.word2idx_outputs['<sos>']
+
 
         # if we get this we break
         eos = self.word2idx_outputs['<eos>']
 
-
         # [s, c] will be updated in each loop iteration
-        s = np.zeros((1, self.config.LATENT_DIM_DECODER))
-        c = np.zeros((1, self.config.LATENT_DIM_DECODER))
-
+        s = np.zeros((self.config.PREDICTION_BATCH_SIZE, self.config.LATENT_DIM_DECODER))
+        c = np.zeros((self.config.PREDICTION_BATCH_SIZE, self.config.LATENT_DIM_DECODER))
 
         # Create the translation
-        output_sentence = []
+        output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE)]
+
         for _ in range(self.max_len_target):
-            o, s, c = self.decoder_model.predict([target_seq, enc_out, s, c])
+            o, s, c = self.decoder_model.predict([target_seqs, enc_outs, s, c])
                 
-
             # Get next word
-            idx = np.argmax(o.flatten())
+            idxs = np.argmax(o, axis=1)
 
-            # End sentence of EOS
-            if eos == idx:
+            # End sentence of EOS            
+            if sum(idxs == eos) == len(idxs):
                 break
 
-            word = ''
-            if idx > 0:
-                word = self.idx2word_trans[idx]
-                output_sentence.append(word)
+            for i in range(self.config.PREDICTION_BATCH_SIZE):
+                word = ''
+                if (idxs[i] > 0) and (idxs[i] !=eos):
+                    word = self.idx2word_trans[idxs[i]]
+                    output_sentences[i].append(word)
+                target_seqs[i, 0] = idxs[i]
 
-            # Update the decoder input
-            # which is just the word just generated
-            target_seq[0, 0] = idx
-
-        return ' '.join(output_sentence)
+        return output_sentences
 
     def predict(self, input_texts, target_texts):
         # map indexes back into real words
@@ -280,13 +350,15 @@ class Seq2SeqAttnModel():
 
         while True:
             # Do some test translations
-            i = np.random.choice(len(input_texts))
-            input_seq = self.encoder_inputs[i:i+1]
-            translation = self.decode_sequence(input_seq)
-            print('-')
-            print('Input sentence:', input_texts[i])
-            print('Predicted translation:', translation)
-            print('Actual translation:', target_texts[i])
+            i = np.random.choice(len(input_texts)-self.config.PREDICTION_BATCH_SIZE+1)
+            input_seqs = self.encoder_inputs[i:i+self.config.PREDICTION_BATCH_SIZE]
+            translations = self.decode_sequence(input_seqs)
+            
+            for j in range(self.config.PREDICTION_BATCH_SIZE):
+                print('-')
+                print('Input:', input_texts[i+j])
+                print('Translation:', ' '.join(translations[j]))
+                print('Actual translation:', target_texts[i+j])
 
             ans = input("Continue? [Y/n]")
             if ans and ans.lower().startswith('n'):

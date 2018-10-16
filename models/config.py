@@ -10,6 +10,8 @@ class VanillaConfig():
     MAX_NUM_WORDS = 20000
     EMBEDDING_DIM = 100
 
+    PREDICTION_BATCH_SIZE = 5
+
     def __repr__(self):
         arttribute = vars(self)
         arttribute = {k:v for k,v in arttribute.items() if not k.startswith("__")}
@@ -28,6 +30,8 @@ class AttnConfig():
     MAX_NUM_WORDS = 20000
     EMBEDDING_DIM = 100    
 
+    PREDICTION_BATCH_SIZE = 5
+    
     def __repr__(self):
         arttribute = vars(self)
         arttribute = {k:v for k,v in arttribute.items() if not k.startswith("__")}

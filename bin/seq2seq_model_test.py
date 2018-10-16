@@ -27,9 +27,9 @@ if __name__ == "__main__":
 
     #### tokenize the inputs, outputs ####
     encoder_inputs, decoder_inputs, decoder_targets, \
-     word2idx_inputs, word2idx_outputs, \
-     max_len_input, max_len_target, num_words_output = \
-                         data_helper.create_vocab(input_texts, target_texts, target_texts_inputs)
+                word2idx_inputs, word2idx_outputs, \
+                max_len_input, max_len_target, num_words_output = \
+                            data_helper.create_vocab(input_texts, target_texts, target_texts_inputs)
 
     #### set data of model ####
     model = Seq2SeqModel(config)
@@ -37,4 +37,4 @@ if __name__ == "__main__":
                     max_len_input, max_len_target, num_words_output, word2idx_inputs, word2idx_outputs)
 
     model.predict_build_model(LOAD_PATH)
-    model.predict(input_texts)
+    model.predict(input_texts, target_texts)
