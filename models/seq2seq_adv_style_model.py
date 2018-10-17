@@ -5,6 +5,7 @@ from keras.models import Model
 from keras.layers import Input, LSTM, GRU, Dense, Embedding
 from keras.utils import to_categorical
 from keras.models import load_model
+from keras.engine.topology import Layer
 
 import keras.backend as K
 
