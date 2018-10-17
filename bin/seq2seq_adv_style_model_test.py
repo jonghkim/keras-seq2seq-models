@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     #### set data of model ####
     model = Seq2SeqAdvStyleModel(config)
-    model.set_data(encoder_inputs, decoder_inputs, decoder_targets,
+    model.set_data(encoder_inputs, decoder_inputs, decoder_targets, styles,
                     max_len_input, max_len_target, num_words_output, word2idx_inputs, word2idx_outputs)
 
     model.predict_build_model(LOAD_PATH)

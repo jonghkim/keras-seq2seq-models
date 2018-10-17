@@ -20,7 +20,7 @@ class Seq2SeqAdvStyleModel():
         self.train_phase = config.MODE == "train"
         self.config = config
 
-    def set_data(self, encoder_inputs, decoder_inputs, decoder_targets,
+    def set_data(self, encoder_inputs, decoder_inputs, decoder_targets, styles,
                     max_len_input, max_len_target, num_words_output, word2idx_inputs, word2idx_outputs):
 
         self.encoder_inputs =encoder_inputs
@@ -54,6 +54,19 @@ class Seq2SeqAdvStyleModel():
             for t, word in enumerate(d):
                 self.decoder_targets_one_hot[i, t, word] = 1
 
+
+        self.style_targets_one_hot = np.zeros(
+            (
+                len(self.encoder_inputs),
+                self.config.STYLE_NUM
+            ),
+        dtype='float32'    
+        )
+
+        # assign the values
+        for i, d in enumerate(styles):
+            self.style_targets_one_hot[i, d] = 1
+
         print('---- Set Data Finished ----')
 
     def set_embedding_matrix(self, embedding_matrix):
@@ -86,6 +99,31 @@ class Seq2SeqAdvStyleModel():
         encoder_states = [h, c]
         # encoder_states = [state_h] # gru
 
+        # classifier layer
+        if self.config.ADVERSARIAL == True:
+            classifier_dense = Dense(STYLE_NUM, activation='softmax')
+            classifier_outputs = classifier_dense(encoder_outputs)
+
+            class AdversarialLoss(Layer):
+                # https://github.com/keras-team/keras/issues/5563
+                def __init__(self, **kwargs):
+                    super(AdversarialLoss, self).__init__(**kwargs)
+
+                def call(self, x, mask=None):
+                    classifier_outputs = x[0]
+                    log_classifier_outputs = K.log(classifier_outputs)
+                    
+                    adv_loss = multiply([classifier_outputs, log_classifier_outputs])
+                    sum_adv_loss = K.sum(adv_loss)
+                    self.add_loss(sum_adv_loss,x)
+                    
+                    return adv_loss
+
+                def get_output_shape_for(self, input_shape):
+                    return (input_shape[0][0],1)
+                
+            adv_loss = AdversarialLoss()([classifier_outputs])
+
         # Set up the decoder, using [h, c] as initial state.
         decoder_inputs_placeholder = Input(shape=(self.max_len_target,))
 
@@ -116,29 +154,50 @@ class Seq2SeqAdvStyleModel():
         decoder_dense = Dense(self.num_words_output, activation='softmax')
         decoder_outputs = decoder_dense(decoder_outputs)
 
-        # Create the model object
-        model = Model([encoder_inputs_placeholder, decoder_inputs_placeholder], decoder_outputs)
+        if self.config.ADVERSARIAL == False:
+            # Create the model object
+            model = Model([encoder_inputs_placeholder, decoder_inputs_placeholder], decoder_outputs)
 
-        # Compile the model and train it
-        model.compile(
-            optimizer='rmsprop',
-            loss='categorical_crossentropy',
-            metrics=['accuracy']
-        )   
+            # Compile the model and train it
+            model.compile(
+                optimizer='rmsprop',
+                loss='categorical_crossentropy',
+                metrics=['accuracy']
+            )   
+
+        elif self.config.ADVERSARIAL == True:
+            model = Model([encoder_inputs_placeholder, decoder_inputs_placeholder],
+                            [decoder_outputs, classifier_outputs, adv_loss])
+
+            def zero_loss(y_true, y_pred):
+                return K.zeros_like(y_pred)
+            
+            model.compile(
+            optimizer = 'rmsprop',    
+            loss = [K.categorical_crossentropy, K.categorical_crossentropy, zero_loss]
+            )
 
         self.model = model
 
         print('---- Build Model Finished ----')
     
     def train_model(self):
-
-        r = self.model.fit(
-            [self.encoder_inputs, self.decoder_inputs], self.decoder_targets_one_hot,
-            batch_size=self.config.BATCH_SIZE,
-            epochs=self.config.EPOCHS,
-            validation_split=0.2,
-        )
-
+        if self.config.ADVERSARIAL == False:
+            r = self.model.fit(
+                [self.encoder_inputs, self.decoder_inputs], self.decoder_targets_one_hot,
+                batch_size=self.config.BATCH_SIZE,
+                epochs=self.config.EPOCHS,
+                validation_split=0.2,
+            )
+        elif self.config.ADVERSARIAL == True:
+            r = self.model.fit(
+                [self.encoder_inputs, self.decoder_inputs], 
+                            [self.decoder_targets_one_hot, self.style_targets_one_hot, 
+                            np.random.randn(self.decoder_targets_one_hot.shape[0],1)],
+                batch_size=self.config.BATCH_SIZE,
+                epochs=self.config.EPOCHS,
+                validation_split=0.2,
+                )
         print('---- Train Model Finished ----')
 
     def save_model(self, SAVE_PATH):
