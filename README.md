@@ -2,7 +2,7 @@
 
 *Work-in-Progress*
 
-This is a project to learn different S2S models based on Keras Functional API
+This is a project to learn different s2s models based on Keras Functional API
 
 ## Data
 - For seq2seq model & seq2seq attn model: Translation Dataset 
@@ -11,13 +11,11 @@ This is a project to learn different S2S models based on Keras Functional API
     - get the data at: http://jmcauley.ucsd.edu/data/amazon/links.html
 
 ## Models
-- Vanilla Seq2Seq Model (Done)
-- Seq2Seq Model with Attention Mechanism (Done)
-
-- Seq2Seq Auto-Encoder Model with Adversarial Network and Style Embedding (Work-in-Progress)
-
-- Pointer Network Model (Work-in-Progress)
-- Pointer-Generator Model (Work-in-Progress)
+- vanilla seq2seq model (Done)
+- seq2seq model with attention mechanism (Done)
+- seq2seq auto-encoder model with adversarial network and style embedding (Work-in-Progress)
+- pointer network model (Work-in-Progress)
+- pointer-generator model (Work-in-Progress)
 
 ## Usage
 ~~~
@@ -29,7 +27,7 @@ python -m bin.seq2seq_model_test
 python -m bin.seq2seq_attn_model_train
 python -m bin.seq2seq_attn_model_test
 
-# For vanilla seq2seq model with adversarial network and style embedding (work-in-progress)
+# For seq2seq auto-encoder model with adversarial network and style embedding  (work-in-progress)
 python -m bin.seq2seq_adv_style_model_train
 python -m bin.seq2seq_adv_style_model_test
 ~~~
