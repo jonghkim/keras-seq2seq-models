@@ -101,7 +101,7 @@ class Seq2SeqAdvStyleModel():
 
         # classifier layer
         if self.config.ADVERSARIAL == True:
-            classifier_dense = Dense(STYLE_NUM, activation='softmax')
+            classifier_dense = Dense(self.config.STYLE_NUM, activation='softmax')
             classifier_outputs = classifier_dense(encoder_outputs)
 
             class AdversarialLoss(Layer):
