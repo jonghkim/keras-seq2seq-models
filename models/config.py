@@ -51,9 +51,11 @@ class AdvStyleConfig():
     MAX_NUM_WORDS = 20000
     EMBEDDING_DIM = 100    
 
-    STYLE_NUM = 2
     ADVERSARIAL = True
-    STYLE_EMBEDDING = False
+
+    STYLE_TRANSFER = True
+    STYLE_NUM = 2
+    STYLE_DIM = 256
     
     PREDICTION_BATCH_SIZE = 5
 

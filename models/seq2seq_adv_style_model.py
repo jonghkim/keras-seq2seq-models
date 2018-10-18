@@ -2,10 +2,11 @@ import os, sys
 import numpy as np
 
 from keras.models import Model
-from keras.layers import Input, LSTM, GRU, Dense, Embedding, Activation, multiply
+from keras.layers import Input, LSTM, GRU, Dense, Embedding, Activation, multiply, Concatenate
 from keras.utils import to_categorical
 from keras.models import load_model
 from keras.engine.topology import Layer
+from keras.initializers import RandomNormal
 
 import keras.backend as K
 
@@ -56,17 +57,26 @@ class Seq2SeqAdvStyleModel():
                 self.decoder_targets_one_hot[i, t, word] = 1
 
 
-        self.style_targets_one_hot = np.zeros(
-            (
-                len(self.encoder_inputs),
-                self.config.STYLE_NUM
-            ),
-        dtype='float32'    
-        )
+        self.style_targets_one_hot = np.zeros((
+                                                len(self.encoder_inputs),
+                                                self.config.STYLE_NUM
+                                            ),
+                                        dtype='float32'    
+                                        )
 
         # assign the values
         for i, d in enumerate(styles):
             self.style_targets_one_hot[i, d] = 1
+
+        self.style_inputs = np.zeros((
+                                        len(self.encoder_inputs),
+                                        self.max_len_target,
+                                    ),
+                                dtype='float32'
+                                )
+
+        for i, d in enumerate(styles):
+            self.style_inputs[i,:] = d
 
         print('---- Set Data Finished ----')
 
@@ -74,7 +84,7 @@ class Seq2SeqAdvStyleModel():
         self.embedding_matrix = embedding_matrix
         print('---- Set Embedding Matrix Finished ----')
 
-    def build_model(self):
+    def build_encoder(self):
         # create embedding layer
         embedding_layer = Embedding(self.embedding_matrix.shape[0],
                                     self.config.EMBEDDING_DIM,
@@ -82,7 +92,6 @@ class Seq2SeqAdvStyleModel():
                                     input_length=self.max_len_input,
                                     # trainable=True
                                     )
-
 
         ##### build the model #####
         encoder_inputs_placeholder = Input(shape=(self.max_len_input,))
@@ -124,7 +133,11 @@ class Seq2SeqAdvStyleModel():
                     return (input_shape[0][0],1)
                 
             adv_loss = AdversarialLoss()([classifier_outputs])
+            return encoder_inputs_placeholder, encoder_states, classifier_outputs, adv_loss
 
+        return encoder_inputs_placeholder, encoder_states
+
+    def build_decoder(self, encoder_states):
         # Set up the decoder, using [h, c] as initial state.
         decoder_inputs_placeholder = Input(shape=(self.max_len_target,))
 
@@ -133,29 +146,73 @@ class Seq2SeqAdvStyleModel():
         decoder_embedding = Embedding(self.num_words_output, self.config.LATENT_DIM)
         decoder_inputs_x = decoder_embedding(decoder_inputs_placeholder)
 
-        # since the decoder is a "to-many" model we want to have
-        # return_sequences=True
-        decoder_lstm = LSTM(
-            self.config.LATENT_DIM,
-            return_sequences=True,
-            return_state=True,
-            # dropout=0.5 # dropout not available on gpu
-        )
-        decoder_outputs, _, _ = decoder_lstm(
-            decoder_inputs_x,
-            initial_state=encoder_states
-        )
+        if self.config.STYLE_TRANSFER ==False:
+            # since the decoder is a "to-many" model we want to have
+            # return_sequences=True
+            decoder_lstm = LSTM(self.config.LATENT_DIM,
+                                return_sequences=True,
+                                return_state=True,
+                                # dropout=0.5 # dropout not available on gpu
+                                )
+            decoder_outputs, _, _ = decoder_lstm(
+                decoder_inputs_x,
+                initial_state=encoder_states
+            )
 
-        # decoder_outputs, _ = decoder_gru(
-        #   decoder_inputs_x,
-        #   initial_state=encoder_states
-        # )
+            # decoder_outputs, _ = decoder_gru(
+            #   decoder_inputs_x,
+            #   initial_state=encoder_states
+            # )
 
-        # final dense layer for predictions
-        decoder_dense = Dense(self.num_words_output, activation='softmax')
-        decoder_outputs = decoder_dense(decoder_outputs)
+            # final dense layer for predictions
+            decoder_dense = Dense(self.num_words_output, activation='softmax')
+            decoder_outputs = decoder_dense(decoder_outputs)
 
+        elif self.config.STYLE_TRANSFER ==True:
+            # Set up style inputs for the training stage
+            # we will give style information in bulks, so that we need same as the max_len_target
+            style_inputs_placeholder = Input(shape=(self.max_len_target, ))            
+            style_embedding = Embedding(self.config.STYLE_NUM, self.config.STYLE_DIM,
+                                        embeddings_initializer= RandomNormal(mean=0.0, stddev=0.05, seed=101))    
+            style_embedding_x = style_embedding(style_inputs_placeholder)
+            
+            # Set up the decoder, using [h, c] as initial state.
+            decoder_inputs_placeholder = Input(shape=(self.max_len_target,))
+
+            # this word embedding will not use pre-trained vectors
+            # although you could
+            decoder_embedding = Embedding(self.num_words_output, self.config.LATENT_DIM)
+            decoder_inputs_x = decoder_embedding(decoder_inputs_placeholder)
+            
+            style_context = Concatenate(axis=-1)
+            style_context_x = style_context([style_embedding_x, decoder_inputs_x])
+            
+            # since the decoder is a "to-many" model we want to have
+            # return_sequences=True
+            decoder_lstm = LSTM(self.config.LATENT_DIM,
+                                return_sequences=True,
+                                return_state=True,
+                                # dropout=0.5 # dropout not available on gpu
+                                )
+            decoder_outputs, _, _ = decoder_lstm(style_context_x,
+                                                initial_state=encoder_states
+                                                )
+
+            # decoder_outputs, _ = decoder_gru(
+            #   decoder_inputs_x,
+            #   initial_state=encoder_states
+            # )
+
+            # final dense layer for predictions
+            decoder_dense = Dense(self.num_words_output, activation='softmax')
+            decoder_outputs = decoder_dense(decoder_outputs)
+
+        return decoder_inputs_placeholder, decoder_outputs
+
+    def build_model(self):
         if self.config.ADVERSARIAL == False:
+            encoder_inputs_placeholder, encoder_states = self.build_encoder()
+            decoder_inputs_placeholder, decoder_outputs = self.build_decoder(encoder_states)
             # Create the model object
             model = Model([encoder_inputs_placeholder, decoder_inputs_placeholder], decoder_outputs)
 
@@ -164,9 +221,12 @@ class Seq2SeqAdvStyleModel():
                 optimizer='rmsprop',
                 loss='categorical_crossentropy',
                 metrics=['accuracy']
-            )   
+            )
 
         elif self.config.ADVERSARIAL == True:
+            encoder_inputs_placeholder, encoder_states, classifier_outputs, adv_loss = self.build_encoder()
+            decoder_inputs_placeholder, decoder_outputs = self.build_decoder(encoder_states)
+
             model = Model([encoder_inputs_placeholder, decoder_inputs_placeholder],
                             [decoder_outputs, classifier_outputs, adv_loss])
 
@@ -174,8 +234,8 @@ class Seq2SeqAdvStyleModel():
                 return K.zeros_like(y_pred)
             
             model.compile(
-            optimizer = 'rmsprop',    
-            loss = [K.categorical_crossentropy, K.categorical_crossentropy, zero_loss]
+                optimizer = 'rmsprop',    
+                loss = [K.categorical_crossentropy, K.categorical_crossentropy, zero_loss]
             )
 
         self.model = model
