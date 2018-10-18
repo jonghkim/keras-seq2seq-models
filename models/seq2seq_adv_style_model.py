@@ -275,7 +275,7 @@ class Seq2SeqAdvStyleModel():
                                 [self.encoder_inputs, self.decoder_inputs, self.style_inputs], 
                                 [self.decoder_targets_one_hot, self.style_targets_one_hot, np.random.randn(decoder_targets_one_hot.shape[0],1)],
                                 batch_size=self.config.BATCH_SIZE,
-                                epochs=elf.config.EPOCHS,
+                                epochs=self.config.EPOCHS,
                                 validation_split=0.2,
                                 )
                                 
