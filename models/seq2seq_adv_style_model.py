@@ -115,7 +115,6 @@ class Seq2SeqAdvStyleModel():
             classifier_outputs = classifier_dense(encoder_outputs)
 
             class AdversarialLoss(Layer):
-                # https://github.com/keras-team/keras/issues/5563
                 def __init__(self, **kwargs):
                     super(AdversarialLoss, self).__init__(**kwargs)
 
@@ -133,6 +132,7 @@ class Seq2SeqAdvStyleModel():
                     return (input_shape[0][0],1)
                 
             adv_loss = AdversarialLoss()([classifier_outputs])
+
             return encoder_inputs_placeholder, encoder_states, classifier_outputs, adv_loss
 
         return encoder_inputs_placeholder, encoder_states

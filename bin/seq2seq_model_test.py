@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     config.MODE = 'inference'
     
-    print(repr(config))
+    print(str(config))
 
     print("Data Path: ", DATA_PATH)
     print("Word2Vec Path: ", WORD2VEC_PATH)
