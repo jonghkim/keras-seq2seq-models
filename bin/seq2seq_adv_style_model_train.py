@@ -12,7 +12,7 @@ if __name__ == "__main__":
     WORD2VEC_PATH = '/data/pretrained_model/word_embedding/glove.6B/glove.6B.%sd.txt' % config.EMBEDDING_DIM
     SAVE_PATH = 'bin/checkpoints/seq2seq_adv_style_model.h5'
 
-    print(str(config))
+    print(config)
     print("Data Path: ", NEG_DATA_PATH, POS_DATA_PATH)
     print("Word2Vec Path: ", WORD2VEC_PATH)
     print("Save Path: ", SAVE_PATH)

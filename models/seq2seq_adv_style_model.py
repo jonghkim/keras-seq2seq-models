@@ -168,6 +168,8 @@ class Seq2SeqAdvStyleModel():
             decoder_dense = Dense(self.num_words_output, activation='softmax')
             decoder_outputs = decoder_dense(decoder_outputs)
 
+            return decoder_inputs_placeholder, decoder_outputs
+
         elif self.config.STYLE_TRANSFER ==True:
             # Set up style inputs for the training stage
             # we will give style information in bulks, so that we need same as the max_len_target
@@ -207,7 +209,7 @@ class Seq2SeqAdvStyleModel():
             decoder_dense = Dense(self.num_words_output, activation='softmax')
             decoder_outputs = decoder_dense(decoder_outputs)
 
-        return decoder_inputs_placeholder, decoder_outputs
+            return decoder_inputs_placeholder, style_inputs_placeholder, decoder_outputs
 
     def build_model(self):
         if self.config.ADVERSARIAL == False:
@@ -224,11 +226,18 @@ class Seq2SeqAdvStyleModel():
             )
 
         elif self.config.ADVERSARIAL == True:
-            encoder_inputs_placeholder, encoder_states, classifier_outputs, adv_loss = self.build_encoder()
-            decoder_inputs_placeholder, decoder_outputs = self.build_decoder(encoder_states)
-
-            model = Model([encoder_inputs_placeholder, decoder_inputs_placeholder],
-                            [decoder_outputs, classifier_outputs, adv_loss])
+            if self.config.STYLE_TRANSFER ==False:
+                encoder_inputs_placeholder, encoder_states, classifier_outputs, adv_loss = self.build_encoder()
+                decoder_inputs_placeholder, decoder_outputs = self.build_decoder(encoder_states)
+                
+                model = Model([encoder_inputs_placeholder, decoder_inputs_placeholder],
+                                [decoder_outputs, classifier_outputs, adv_loss])
+            elif self.config.STYLE_TRANSFER ==True:
+                encoder_inputs_placeholder, encoder_states, classifier_outputs, adv_loss = self.build_encoder()
+                decoder_inputs_placeholder, style_inputs_placeholder, decoder_outputs = self.build_decoder(encoder_states)
+                
+                model = Model([encoder_inputs_placeholder, decoder_inputs_placeholder, style_inputs_placeholder],
+                  [decoder_outputs, classifier_outputs, adv_loss])
 
             def zero_loss(y_true, y_pred):
                 return K.zeros_like(y_pred)
@@ -245,20 +254,31 @@ class Seq2SeqAdvStyleModel():
     def train_model(self):
         if self.config.ADVERSARIAL == False:
             r = self.model.fit(
-                [self.encoder_inputs, self.decoder_inputs], self.decoder_targets_one_hot,
-                batch_size=self.config.BATCH_SIZE,
-                epochs=self.config.EPOCHS,
-                validation_split=0.2,
-            )
+                                [self.encoder_inputs, self.decoder_inputs], self.decoder_targets_one_hot,
+                                batch_size=self.config.BATCH_SIZE,
+                                epochs=self.config.EPOCHS,
+                                validation_split=0.2,
+                            )
+
         elif self.config.ADVERSARIAL == True:
-            r = self.model.fit(
-                [self.encoder_inputs, self.decoder_inputs], 
-                            [self.decoder_targets_one_hot, self.style_targets_one_hot, 
-                            np.random.randn(self.decoder_targets_one_hot.shape[0],1)],
-                batch_size=self.config.BATCH_SIZE,
-                epochs=self.config.EPOCHS,
-                validation_split=0.2,
-                )
+            if self.config.STYLE_TRANSFER ==False:
+                r = self.model.fit(
+                                [self.encoder_inputs, self.decoder_inputs], 
+                                [self.decoder_targets_one_hot, self.style_targets_one_hot, 
+                                np.random.randn(self.decoder_targets_one_hot.shape[0],1)],
+                                batch_size=self.config.BATCH_SIZE,
+                                epochs=self.config.EPOCHS,
+                                validation_split=0.2,
+                                )
+            elif self.config.STYLE_TRANSFER ==True:
+                r = self. model.fit(
+                                [self.encoder_inputs, self.decoder_inputs, self.style_inputs], 
+                                [self.decoder_targets_one_hot, self.style_targets_one_hot, np.random.randn(decoder_targets_one_hot.shape[0],1)],
+                                batch_size=self.config.BATCH_SIZE,
+                                epochs=elf.config.EPOCHS,
+                                validation_split=0.2,
+                                )
+                                
         print('---- Train Model Finished ----')
 
     def save_model(self, SAVE_PATH):
