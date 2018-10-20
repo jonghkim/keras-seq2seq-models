@@ -386,7 +386,29 @@ class Seq2SeqAdvStyleModel():
             
     def predict_build_model(self, LOAD_PATH):
         # load model
-        self.model = load_model(LOAD_PATH)
+        class AdversarialLoss(Layer):
+            def __init__(self, **kwargs):
+                super(AdversarialLoss, self).__init__(**kwargs)
+
+            def call(self, x, mask=None):
+                classifier_outputs = x[0]
+                log_classifier_outputs = K.log(classifier_outputs)
+                
+                adv_loss = multiply([classifier_outputs, log_classifier_outputs])
+                sum_adv_loss = K.sum(adv_loss)
+                self.add_loss(sum_adv_loss,x)
+                
+                return adv_loss
+
+            def get_output_shape_for(self, input_shape):
+                return (input_shape[0][0],1)
+
+        def zero_loss(y_true, y_pred):
+            return K.zeros_like(y_pred)
+
+        self.model = load_model(LOAD_PATH, custom_objects={'AdversarialLoss': AdversarialLoss,
+                                'zero_loss':zero_loss})
+                                
         encoder_inputs_placeholder, encoder_states = self.load_encoder()
         # we need to create another model
         # that can take in the RNN state and previous word as input
