@@ -337,6 +337,8 @@ class Seq2SeqAdvStyleModel():
             return decoder_inputs_single, decoder_states_inputs, decoder_outputs, decoder_states
         elif self.config.STYLE_TRANSFER == True:
             concatenate = self.model.get_layer('concatenate')
+            style_embedding = self.model.get_layer('style_embedding')
+
             style_inputs_single = Input(shape=(1,))
             style_inputs_single_x = style_embedding(style_inputs_single)
 
