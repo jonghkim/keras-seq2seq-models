@@ -2,12 +2,12 @@ import os, sys
 import numpy as np
 
 from utils.data_helper import DataHelper
-from models.config import VanillaConfig
+from models.config import AdvStyleConfig
 from models.seq2seq_adv_style_model import Seq2SeqAdvStyleModel
 
 if __name__ == "__main__":
 
-    config = VanillaConfig()
+    config = AdvStyleConfig()
     NEG_DATA_PATH = 'toy_data/sentiment/neg.txt' 
     POS_DATA_PATH = 'toy_data/sentiment/pos.txt'
     WORD2VEC_PATH = '/data/pretrained_model/word_embedding/glove.6B/glove.6B.%sd.txt' % config.EMBEDDING_DIM
