@@ -13,7 +13,7 @@ This is a project to learn different s2s models based on Keras Functional API
 ## Models
 - vanilla seq2seq model (Done)
 - seq2seq model with attention mechanism (Done)
-- seq2seq auto-encoder model with adversarial network and style embedding (Work-in-Progress)
+- seq2seq auto-encoder model with adversarial network and style embedding (Done)
 - pointer network model (Work-in-Progress)
 - pointer-generator model (Work-in-Progress)
 
