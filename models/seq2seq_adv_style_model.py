@@ -189,7 +189,7 @@ class Seq2SeqAdvStyleModel():
             decoder_embedding = Embedding(self.num_words_output, self.config.LATENT_DIM, name='decoder_embedding')
             decoder_inputs_x = decoder_embedding(decoder_inputs_placeholder)
             
-            style_context = Concatenate(axis=-1)
+            style_context = Concatenate(axis=-1, name='concatenate')
             style_context_x = style_context([style_embedding_x, decoder_inputs_x])
             
             # since the decoder is a "to-many" model we want to have
@@ -297,7 +297,7 @@ class Seq2SeqAdvStyleModel():
             
             encoder_states = [h, c]
             return encoder_inputs_placeholder, encoder_states
-            
+
         elif self.config.ADVERSARIAL == True:
             encoder_inputs_placeholder = self.model.get_layer('encoder_input').output
             encoder_outputs, h, c = self.model.get_layer('encoder_lstm').output
@@ -307,35 +307,6 @@ class Seq2SeqAdvStyleModel():
             return encoder_inputs_placeholder, encoder_states
             
     def load_decoder(self):
-        
-        """
-            # adversarial false style false
-            r = model.fit(
-            [encoder_inputs, decoder_inputs], decoder_targets_one_hot,
-            batch_size=BATCH_SIZE,
-            epochs=EPOCHS,
-            validation_split=0.2,
-            )
-
-            # adversarial true style false
-            r = model.fit(
-            [encoder_inputs, decoder_inputs],
-            [decoder_targets_one_hot, style_targets_one_hot, np.random.randn(decoder_targets_one_hot.shape[0],1)],
-            batch_size=BATCH_SIZE,
-            epochs=EPOCHS,
-            validation_split=0.2,
-            )
-
-            # adversarial true style true
-            r = model.fit(
-            [encoder_inputs, decoder_inputs, style_inputs],
-            [decoder_targets_one_hot, style_targets_one_hot, np.random.randn(decoder_targets_one_hot.shape[0],1)],
-            batch_size=BATCH_SIZE,
-            epochs=EPOCHS,
-            validation_split=0.2,
-            )  
-
-        """
         decoder_embedding = self.model.get_layer('decoder_embedding')
         decoder_lstm = self.model.get_layer('decoder_lstm')
         decoder_dense = self.model.get_layer('decoder_dense')
