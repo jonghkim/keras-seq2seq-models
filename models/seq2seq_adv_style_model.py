@@ -297,11 +297,11 @@ class Seq2SeqAdvStyleModel():
             
             encoder_states = [h, c]
             return encoder_inputs_placeholder, encoder_states
+            
         elif self.config.ADVERSARIAL == True:
             encoder_inputs_placeholder = self.model.get_layer('encoder_input').output
             encoder_outputs, h, c = self.model.get_layer('encoder_lstm').output
 
-            adversarial_loss_1
             encoder_states = [h, c]
 
             return encoder_inputs_placeholder, encoder_states
@@ -408,7 +408,7 @@ class Seq2SeqAdvStyleModel():
 
         self.model = load_model(LOAD_PATH, custom_objects={'AdversarialLoss': AdversarialLoss,
                                 'zero_loss':zero_loss})
-                                
+
         encoder_inputs_placeholder, encoder_states = self.load_encoder()
         # we need to create another model
         # that can take in the RNN state and previous word as input
