@@ -157,19 +157,16 @@ class Seq2SeqModel():
         self.model.save(SAVE_PATH)
     
     def load_encoder(self):
-        layer_names = {layer.name: i for i,layer in enumerate(self.model.layers)}
-
-        encoder_inputs_placeholder = self.model.input[layer_names['encoder_input']]
-        encoder_outputs, h, c = self.model.layers[layer_names['encoder_lstm']].output
+        encoder_inputs_placeholder = self.model.get_layer('encoder_input').output
+        encoder_outputs, h, c = self.model.get_layer('encoder_lstm').output
         encoder_states = [h, c]
         
         return encoder_inputs_placeholder, encoder_states
 
     def load_decoder(self):
-        layer_names = {layer.name: i for i,layer in enumerate(self.model.layers)}
-        decoder_embedding = self.model.layers[layer_names['decoder_embedding']]
-        decoder_lstm = self.model.layers[layer_names['decoder_lstm']]
-        decoder_dense = self.model.layers[layer_names['decoder_dense']]        
+        decoder_embedding = self.model.get_layer('decoder_embedding')
+        decoder_lstm = self.model.get_layer('decoder_lstm')
+        decoder_dense = self.model.get_layer('decoder_dense')
 
         decoder_state_input_h = Input(shape=(self.config.LATENT_DIM,))
         decoder_state_input_c = Input(shape=(self.config.LATENT_DIM,))

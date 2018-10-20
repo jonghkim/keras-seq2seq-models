@@ -291,20 +291,54 @@ class Seq2SeqAdvStyleModel():
 
     def load_encoder(self):
 
-        layer_names = {layer.name: i for i,layer in enumerate(self.model.layers)}
+        if self.config.ADVERSARIAL == False:
+            encoder_inputs_placeholder = self.model.get_layer('encoder_input').output
+            encoder_outputs, h, c = self.model.get_layer('encoder_lstm').output
+            
+            encoder_states = [h, c]
+            return encoder_inputs_placeholder, encoder_states
+        elif self.config.ADVERSARIAL == True:
+            encoder_inputs_placeholder = self.model.get_layer('encoder_input').output
+            encoder_outputs, h, c = self.model.get_layer('encoder_lstm').output
 
-        encoder_inputs_placeholder = self.model.input[layer_names['encoder_input']]
-        encoder_outputs, h, c = self.model.layers[layer_names['encoder_lstm']].output
-        encoder_states = [h, c]
-        return encoder_inputs_placeholder, encoder_states
+            adversarial_loss_1
+            encoder_states = [h, c]
 
+            return encoder_inputs_placeholder, encoder_states
+            
     def load_decoder(self):
+        
+        """
+            # adversarial false style false
+            r = model.fit(
+            [encoder_inputs, decoder_inputs], decoder_targets_one_hot,
+            batch_size=BATCH_SIZE,
+            epochs=EPOCHS,
+            validation_split=0.2,
+            )
 
-        layer_names = {layer.name: i for i,layer in enumerate(self.model.layers)}
+            # adversarial true style false
+            r = model.fit(
+            [encoder_inputs, decoder_inputs],
+            [decoder_targets_one_hot, style_targets_one_hot, np.random.randn(decoder_targets_one_hot.shape[0],1)],
+            batch_size=BATCH_SIZE,
+            epochs=EPOCHS,
+            validation_split=0.2,
+            )
 
-        decoder_embedding = self.model.layers[layer_names['decoder_embedding']]
-        decoder_lstm = self.model.layers[layer_names['decoder_lstm']]
-        decoder_dense = self.model.layers[layer_names['decoder_dense']]        
+            # adversarial true style true
+            r = model.fit(
+            [encoder_inputs, decoder_inputs, style_inputs],
+            [decoder_targets_one_hot, style_targets_one_hot, np.random.randn(decoder_targets_one_hot.shape[0],1)],
+            batch_size=BATCH_SIZE,
+            epochs=EPOCHS,
+            validation_split=0.2,
+            )  
+
+        """
+        decoder_embedding = self.model.get_layer('decoder_embedding')
+        decoder_lstm = self.model.get_layer('decoder_lstm')
+        decoder_dense = self.model.get_layer('decoder_dense')
 
         decoder_state_input_h = Input(shape=(self.config.LATENT_DIM,))
         decoder_state_input_c = Input(shape=(self.config.LATENT_DIM,))
@@ -314,29 +348,46 @@ class Seq2SeqAdvStyleModel():
         decoder_inputs_single = Input(shape=(1,))
         decoder_inputs_single_x = decoder_embedding(decoder_inputs_single)
 
-        # this time, we want to keep the states too, to be output
-        # by our sampling model
-        decoder_outputs, h, c = decoder_lstm(
-                                decoder_inputs_single_x,
-                                initial_state=decoder_states_inputs
-                                )
-        # decoder_outputs, state_h = decoder_lstm(
-        #   decoder_inputs_single_x,
-        #   initial_state=decoder_states_inputs
-        # ) #gru
-        decoder_states = [h, c]
-        # decoder_states = [h] # gru
-        decoder_outputs = decoder_dense(decoder_outputs)
+        if self.config.STYLE_TRANSFER == False:
+            # this time, we want to keep the states too, to be output
+            # by our sampling model
+            decoder_outputs, h, c = decoder_lstm(
+                                    decoder_inputs_single_x,
+                                    initial_state=decoder_states_inputs
+                                    )
+            # decoder_outputs, state_h = decoder_lstm(
+            #   decoder_inputs_single_x,
+            #   initial_state=decoder_states_inputs
+            # ) #gru
+            decoder_states = [h, c]
+            # decoder_states = [h] # gru
+            decoder_outputs = decoder_dense(decoder_outputs)
 
-        return decoder_inputs_single, decoder_states_inputs, decoder_outputs, decoder_states
-        
+            return decoder_inputs_single, decoder_states_inputs, decoder_outputs, decoder_states
+        elif self.config.STYLE_TRANSFER == True:
+            concatenate = self.model.get_layer('concatenate')
+            style_inputs_single = Input(shape=(1,))
+            style_inputs_single_x = style_embedding(style_inputs_single)
 
+            style_context_x = concatenate([style_inputs_single_x, decoder_inputs_single_x])
+            decoder_outputs, h, c = decoder_lstm(
+                                    style_context_x,
+                                    initial_state=decoder_states_inputs
+                                    )
+            # decoder_outputs, state_h = decoder_lstm(
+            #   decoder_inputs_single_x,
+            #   initial_state=decoder_states_inputs
+            # ) #gru
+            decoder_states = [h, c]
+            # decoder_states = [h] # gru
+            decoder_outputs = decoder_dense(decoder_outputs)
+
+            return decoder_inputs_single, decoder_states_inputs, style_inputs_single, decoder_outputs, decoder_states
+            
     def predict_build_model(self, LOAD_PATH):
         # load model
         self.model = load_model(LOAD_PATH)
         encoder_inputs_placeholder, encoder_states = self.load_encoder()
-        decoder_inputs_single, decoder_states_inputs, decoder_outputs, decoder_states = self.load_decoder()
-        
         # we need to create another model
         # that can take in the RNN state and previous word as input
         # and accept a T=1 sequence.
@@ -350,36 +401,65 @@ class Seq2SeqAdvStyleModel():
         # The sampling model
         # inputs: y(t-1), h(t-1), c(t-1)
         # outputs: y(t), h(t), c(t)
-        self.decoder_model = Model(
-                            [decoder_inputs_single] + decoder_states_inputs, 
-                            [decoder_outputs] + decoder_states
-                            )
+        if self.config.STYLE_TRANSFER == False:
+            decoder_inputs_single, decoder_states_inputs, decoder_outputs, decoder_states = self.load_decoder()
+
+            self.decoder_model = Model(
+                                [decoder_inputs_single] + decoder_states_inputs, 
+                                [decoder_outputs] + decoder_states
+                                )
+        elif self.config.STYLE_TRANSFER == True:      
+            decoder_inputs_single, decoder_states_inputs, style_inputs_single, decoder_outputs, decoder_states = self.load_decoder()
+
+            self.decoder_model = Model(
+                                [decoder_inputs_single, style_inputs_single] + decoder_states_inputs, 
+                                [decoder_outputs] + decoder_states
+                                )
 
     def decode_sequence(self, input_seqs):
-        # Encode the input as state vectors.
-        states_values = self.encoder_model.predict(input_seqs)
-
         # Generate empty target sequence of length 1.
-        target_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE, 1))
+        if self.config.STYLE_TRANSFER == False:
+            # Encode the input as state vectors.            
+            states_values = self.encoder_model.predict(input_seqs)
+            target_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE, 1))
+            # Populate the first character of target sequence with the start character.
+            # NOTE: tokenizer lower-cases all words
+            for i in range(self.config.PREDICTION_BATCH_SIZE):
+                target_seqs[i, 0] = self.word2idx_outputs['<sos>']
 
-        # Populate the first character of target sequence with the start character.
-        # NOTE: tokenizer lower-cases all words
-        for i in range(self.config.PREDICTION_BATCH_SIZE):
-            target_seqs[i, 0] = self.word2idx_outputs['<sos>']
+            # Create the translation
+            output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE)]
+
+        elif self.config.STYLE_TRANSFER == True:
+            input_seqs = np.repeat(input_seqs, self.config.STYLE_NUM, axis=0)
+            states_values = self.encoder_model.predict(input_seqs)
+
+            target_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM, 1))
+            
+            style_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM, 1))
+
+            for i in range(self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM):
+                target_seqs[i, 0] = self.word2idx_outputs['<sos>']
+                style_seqs[i, 0] = i%self.config.STYLE_NUM
+            
+            output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE**self.config.STYLE_NUM)]
 
         # if we get this we break
         eos = self.word2idx_outputs['<eos>']
-
-        # Create the translation
-        output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE)]
+        
         for _ in range(self.max_len_target):
-            output_tokens, h, c = self.decoder_model.predict(
-                                    [target_seqs] + states_values
-                                    )
-            # output_tokens, h = decoder_model.predict(
-            #     [target_seq] + states_value
-            # ) # gru
-
+            if self.config.STYLE_TRANSFER == False:
+                output_tokens, h, c = self.decoder_model.predict(
+                                        [target_seqs] + states_values
+                                        )
+                # output_tokens, h = decoder_model.predict(
+                #     [target_seq] + states_value
+                # ) # gru
+            elif self.config.STYLE_TRANSFER == True:
+                output_tokens, h, c = self.decoder_model.predict(
+                                        [target_seqs, style_seqs] + states_values
+                                        )
+                             
             # Get next word
             idxs = np.argmax(output_tokens, axis=2)
             idxs = idxs.reshape(-1)
@@ -413,10 +493,18 @@ class Seq2SeqAdvStyleModel():
             input_seqs = self.encoder_inputs[i:i+self.config.PREDICTION_BATCH_SIZE]
             translations = self.decode_sequence(input_seqs)
             for j in range(self.config.PREDICTION_BATCH_SIZE):
-                print('-')            
+                print('-')
                 print('Input:', input_texts[i+j])
-                print('Translation:', ' '.join(translations[j]))
-                print('Actual translation:', target_texts[i+j])
+                if self.config.STYLE_TRANSFER == False:
+                    print('Translation:', ' '.join(translations[j]))
+                    print('Actual translation:', target_texts[i+j])
+                elif self.config.STYLE_TRANSFER == True:
+                    for k in range(self.config.STYLE_NUM):
+                        print('Translation to Style {}:'.format(str(k)), 
+                                ' '.join(translations[j*self.config.STYLE_NUM+k]))
+
+                    print('Actual styles:', self.style_inputs[i+j])
+                    print('Actual translation:', target_texts[i+j])
 
             ans = input("Continue? [Y/n]")
             if ans and ans.lower().startswith('n'):
