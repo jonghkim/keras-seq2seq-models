@@ -430,14 +430,13 @@ class Seq2SeqAdvStyleModel():
             states_values = self.encoder_model.predict(input_seqs)
 
             target_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM, 1))
-            
             style_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM, 1))
 
             for i in range(self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM):
                 target_seqs[i, 0] = self.word2idx_outputs['<sos>']
                 style_seqs[i, 0] = i%self.config.STYLE_NUM
             
-            output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE**self.config.STYLE_NUM)]
+            output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM)]
 
         # if we get this we break
         eos = self.word2idx_outputs['<eos>']
@@ -463,15 +462,24 @@ class Seq2SeqAdvStyleModel():
             if sum(idxs == eos) == len(idxs):
                 break
 
-            for i in range(self.config.PREDICTION_BATCH_SIZE):
-                word = ''
-                if (idxs[i] > 0) and (idxs[i] !=eos):
-                    word = self.idx2word_trans[idxs[i]]
-                    output_sentences[i].append(word)
-                # Update the decoder input
-                # which is just the word just generated
-                target_seqs[i, 0] = idxs[i]
-
+            if self.config.STYLE_TRANSFER == False:
+                for i in range(self.config.PREDICTION_BATCH_SIZE):
+                    word = ''
+                    if (idxs[i] > 0) and (idxs[i] !=eos):
+                        word = self.idx2word_trans[idxs[i]]
+                        output_sentences[i].append(word)
+                    # Update the decoder input
+                    # which is just the word just generated
+                    target_seqs[i, 0] = idxs[i]
+            elif self.config.STYLE_TRANSFER == True:
+                for i in range(self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM):
+                    word = ''
+                    if (idxs[i] > 0) and (idxs[i] !=eos):
+                        word = self.idx2word_trans[idxs[i]]
+                        output_sentences[i].append(word)
+                    # Update the decoder input
+                    # which is just the word just generated
+                    target_seqs[i, 0] = idxs[i]
             # Update states
             states_values = [h, c]
             # states_value = [h] # gru
@@ -490,9 +498,11 @@ class Seq2SeqAdvStyleModel():
             for j in range(self.config.PREDICTION_BATCH_SIZE):
                 print('-')
                 print('Input:', input_texts[i+j])
+
                 if self.config.STYLE_TRANSFER == False:
                     print('Translation:', ' '.join(translations[j]))
                     print('Actual translation:', target_texts[i+j])
+
                 elif self.config.STYLE_TRANSFER == True:
                     for k in range(self.config.STYLE_NUM):
                         print('Translation to Style {}:'.format(str(k)), 
