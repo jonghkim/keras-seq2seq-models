@@ -61,22 +61,24 @@ class Seq2SeqModel():
         self.embedding_matrix = embedding_matrix
         print('---- Set Embedding Matrix Finished ----')
 
-    def build_model(self):
+    def build_encoder(self):
         # create embedding layer
         embedding_layer = Embedding(self.embedding_matrix.shape[0],
                                     self.config.EMBEDDING_DIM,
                                     weights=[self.embedding_matrix],
                                     input_length=self.max_len_input,
+                                    name='encoder_embedding'
                                     # trainable=True
                                     )
 
 
         ##### build the model #####
-        encoder_inputs_placeholder = Input(shape=(self.max_len_input,))
+        encoder_inputs_placeholder = Input(shape=(self.max_len_input,),name='encoder_input')
         x = embedding_layer(encoder_inputs_placeholder)
         encoder = LSTM(
             self.config.LATENT_DIM,
             return_state=True,
+            name='encoder_lstm'
             # dropout=0.5 # dropout not available on gpu
         )
 
@@ -86,13 +88,15 @@ class Seq2SeqModel():
         # keep only the states to pass into decoder
         encoder_states = [h, c]
         # encoder_states = [state_h] # gru
+        return encoder_inputs_placeholder, encoder_states
 
+    def build_decoder(self, encoder_states):
         # Set up the decoder, using [h, c] as initial state.
-        decoder_inputs_placeholder = Input(shape=(self.max_len_target,))
+        decoder_inputs_placeholder = Input(shape=(self.max_len_target,), name='decoder_input')
 
         # this word embedding will not use pre-trained vectors
         # although you could
-        decoder_embedding = Embedding(self.num_words_output, self.config.LATENT_DIM)
+        decoder_embedding = Embedding(self.num_words_output, self.config.LATENT_DIM, name='decoder_embedding')
         decoder_inputs_x = decoder_embedding(decoder_inputs_placeholder)
 
         # since the decoder is a "to-many" model we want to have
@@ -101,6 +105,7 @@ class Seq2SeqModel():
             self.config.LATENT_DIM,
             return_sequences=True,
             return_state=True,
+            name='decoder_lstm'
             # dropout=0.5 # dropout not available on gpu
         )
         decoder_outputs, _, _ = decoder_lstm(
@@ -114,8 +119,13 @@ class Seq2SeqModel():
         # )
 
         # final dense layer for predictions
-        decoder_dense = Dense(self.num_words_output, activation='softmax')
+        decoder_dense = Dense(self.num_words_output, activation='softmax', name='decoder_dense')
         decoder_outputs = decoder_dense(decoder_outputs)
+        return decoder_inputs_placeholder, decoder_outputs
+
+    def build_model(self):
+        encoder_inputs_placeholder, encoder_states = self.build_encoder()
+        decoder_inputs_placeholder, decoder_outputs = self.build_decoder(encoder_states)
 
         # Create the model object
         model = Model([encoder_inputs_placeholder, decoder_inputs_placeholder], decoder_outputs)
@@ -145,27 +155,21 @@ class Seq2SeqModel():
     def save_model(self, SAVE_PATH):
         # Save model
         self.model.save(SAVE_PATH)
+    
+    def load_encoder(self):
+        layer_names = {layer.name: i for i,layer in enumerate(self.model.layers)}
 
-    def predict_build_model(self, LOAD_PATH):
-        # load model
-        self.model = load_model(LOAD_PATH)
-
-        encoder_inputs_placeholder = self.model.input[0]
-        encoder_outputs, h, c = self.model.layers[4].output
+        encoder_inputs_placeholder = self.model.input[layer_names['encoder_input']]
+        encoder_outputs, h, c = self.model.layers[layer_names['encoder_lstm']].output
         encoder_states = [h, c]
-        decoder_embedding = self.model.layers[3]
-        decoder_lstm = self.model.layers[5]
-        decoder_dense = self.model.layers[6]        
-
-        # we need to create another model
-        # that can take in the RNN state and previous word as input
-        # and accept a T=1 sequence.
-
-        # The encoder will be stand-alone
-        # From this we will get our initial decoder hidden state
         
-        ##### build the model #####
-        self.encoder_model = Model(encoder_inputs_placeholder, encoder_states)
+        return encoder_inputs_placeholder, encoder_states
+
+    def load_decoder(self):
+        layer_names = {layer.name: i for i,layer in enumerate(self.model.layers)}
+        decoder_embedding = self.model.layers[layer_names['decoder_embedding']]
+        decoder_lstm = self.model.layers[layer_names['decoder_lstm']]
+        decoder_dense = self.model.layers[layer_names['decoder_dense']]        
 
         decoder_state_input_h = Input(shape=(self.config.LATENT_DIM,))
         decoder_state_input_c = Input(shape=(self.config.LATENT_DIM,))
@@ -188,6 +192,24 @@ class Seq2SeqModel():
         decoder_states = [h, c]
         # decoder_states = [h] # gru
         decoder_outputs = decoder_dense(decoder_outputs)
+
+        return decoder_inputs_single, decoder_states_inputs, decoder_outputs, decoder_states
+
+    def predict_build_model(self, LOAD_PATH):
+        # load model
+        self.model = load_model(LOAD_PATH)
+        encoder_inputs_placeholder, encoder_states = self.load_encoder()
+        decoder_inputs_single, decoder_states_inputs, decoder_outputs, decoder_states = self.load_decoder()
+        
+        # we need to create another model
+        # that can take in the RNN state and previous word as input
+        # and accept a T=1 sequence.
+
+        # The encoder will be stand-alone
+        # From this we will get our initial decoder hidden state
+
+        ##### build the model #####
+        self.encoder_model = Model(encoder_inputs_placeholder, encoder_states)
 
         # The sampling model
         # inputs: y(t-1), h(t-1), c(t-1)

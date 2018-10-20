@@ -69,8 +69,30 @@ class Seq2SeqAttnModel():
         self.embedding_matrix = embedding_matrix
         print('---- Set Embedding Matrix Finished ----')
 
- 
-    def build_model(self):
+    def build_encoder(self):
+        # create embedding layer
+        embedding_layer = Embedding(
+                            self.num_words,
+                            self.config.EMBEDDING_DIM,
+                            weights=[self.embedding_matrix],
+                            input_length=self.max_len_input,
+                            name='encoder_embedding'
+                            # trainable=True
+                            )
+        ##### build the model #####
+
+        # Set up the encoder - simple!
+        encoder_inputs_placeholder = Input(shape=(self.max_len_input,),name='encoder_input')
+        x = embedding_layer(encoder_inputs_placeholder)
+        encoder = Bidirectional(LSTM(self.config.LATENT_DIM,
+                                    return_sequences=True,
+                                    name='encoder_lstm'
+                                    # dropout=0.5 # dropout not available on gpu
+                                    ))
+        encoder_outputs = encoder(x)
+        return encoder_inputs_placeholder, encoder_outputs
+
+    def build_decoder(self, encoder_outputs):
         # make sure we do softmax over the time axis
         # expected shape is N x T x D
         # note: the latest version of Keras allows you to pass in axis arg
@@ -107,25 +129,6 @@ class Seq2SeqAttnModel():
 
             return context
             
-        # create embedding layer
-        embedding_layer = Embedding(
-                            self.num_words,
-                            self.config.EMBEDDING_DIM,
-                            weights=[self.embedding_matrix],
-                            input_length=self.max_len_input,
-                            # trainable=True
-                            )
-        ##### build the model #####
-
-        # Set up the encoder - simple!
-        encoder_inputs_placeholder = Input(shape=(self.max_len_input,))
-        x = embedding_layer(encoder_inputs_placeholder)
-        encoder = Bidirectional(LSTM(self.config.LATENT_DIM,
-                                    return_sequences=True,
-                                    # dropout=0.5 # dropout not available on gpu
-                                    ))
-        encoder_outputs = encoder(x)
-
         # Set up the decoder - not so simple
         decoder_inputs_placeholder = Input(shape=(self.max_len_target,))
 
@@ -193,6 +196,11 @@ class Seq2SeqAttnModel():
         # make it a layer
         stacker = Lambda(stack_and_transpose)
         outputs = stacker(outputs)
+        return decoder_inputs_placeholder, initial_s, initial_c, outputs
+
+    def build_model(self):
+        encoder_inputs_placeholder, encoder_outputs = self.build_encoder()
+        decoder_inputs_placeholder, initial_s, initial_c, outputs = self.build_decoder(encoder_outputs)
 
         # create the model
         self.model = Model(
@@ -264,6 +272,8 @@ class Seq2SeqAttnModel():
 
         self.model = load_model(LOAD_PATH,
                                 custom_objects={'soft_max_axis1': soft_max_axis1, 't': t})
+        
+        
 
         encoder_inputs_placeholder = self.model.input[0]
         encoder_outputs = self.model.layers[3].output

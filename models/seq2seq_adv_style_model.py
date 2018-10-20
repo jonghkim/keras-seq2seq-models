@@ -90,15 +90,17 @@ class Seq2SeqAdvStyleModel():
                                     self.config.EMBEDDING_DIM,
                                     weights=[self.embedding_matrix],
                                     input_length=self.max_len_input,
+                                    name='encoder_embedding'
                                     # trainable=True
                                     )
 
         ##### build the model #####
-        encoder_inputs_placeholder = Input(shape=(self.max_len_input,))
+        encoder_inputs_placeholder = Input(shape=(self.max_len_input,), name='encoder_input')
         x = embedding_layer(encoder_inputs_placeholder)
         encoder = LSTM(
             self.config.LATENT_DIM,
             return_state=True,
+            name='encoder_lstm'
             # dropout=0.5 # dropout not available on gpu
         )
 
@@ -111,7 +113,7 @@ class Seq2SeqAdvStyleModel():
 
         # classifier layer
         if self.config.ADVERSARIAL == True:
-            classifier_dense = Dense(self.config.STYLE_NUM, activation='softmax')
+            classifier_dense = Dense(self.config.STYLE_NUM, activation='softmax', name='classifier_dense')
             classifier_outputs = classifier_dense(encoder_outputs)
 
             class AdversarialLoss(Layer):
@@ -139,11 +141,11 @@ class Seq2SeqAdvStyleModel():
 
     def build_decoder(self, encoder_states):
         # Set up the decoder, using [h, c] as initial state.
-        decoder_inputs_placeholder = Input(shape=(self.max_len_target,))
+        decoder_inputs_placeholder = Input(shape=(self.max_len_target,), name='decoder_input')
 
         # this word embedding will not use pre-trained vectors
         # although you could
-        decoder_embedding = Embedding(self.num_words_output, self.config.LATENT_DIM)
+        decoder_embedding = Embedding(self.num_words_output, self.config.LATENT_DIM, name='decoder_embedding')
         decoder_inputs_x = decoder_embedding(decoder_inputs_placeholder)
 
         if self.config.STYLE_TRANSFER ==False:
@@ -152,6 +154,7 @@ class Seq2SeqAdvStyleModel():
             decoder_lstm = LSTM(self.config.LATENT_DIM,
                                 return_sequences=True,
                                 return_state=True,
+                                name='decoder_lstm'
                                 # dropout=0.5 # dropout not available on gpu
                                 )
             decoder_outputs, _, _ = decoder_lstm(
@@ -165,7 +168,7 @@ class Seq2SeqAdvStyleModel():
             # )
 
             # final dense layer for predictions
-            decoder_dense = Dense(self.num_words_output, activation='softmax')
+            decoder_dense = Dense(self.num_words_output, activation='softmax', name='decoder_dense')
             decoder_outputs = decoder_dense(decoder_outputs)
 
             return decoder_inputs_placeholder, decoder_outputs
@@ -173,17 +176,17 @@ class Seq2SeqAdvStyleModel():
         elif self.config.STYLE_TRANSFER ==True:
             # Set up style inputs for the training stage
             # we will give style information in bulks, so that we need same as the max_len_target
-            style_inputs_placeholder = Input(shape=(self.max_len_target, ))            
+            style_inputs_placeholder = Input(shape=(self.max_len_target, ), name='style_input')            
             style_embedding = Embedding(self.config.STYLE_NUM, self.config.STYLE_DIM,
-                                        embeddings_initializer= RandomNormal(mean=0.0, stddev=0.05, seed=101))    
+                                        embeddings_initializer= RandomNormal(mean=0.0, stddev=0.05, seed=101), name='style_embedding')    
             style_embedding_x = style_embedding(style_inputs_placeholder)
             
             # Set up the decoder, using [h, c] as initial state.
-            decoder_inputs_placeholder = Input(shape=(self.max_len_target,))
+            decoder_inputs_placeholder = Input(shape=(self.max_len_target,),name='decoder_input')
 
             # this word embedding will not use pre-trained vectors
             # although you could
-            decoder_embedding = Embedding(self.num_words_output, self.config.LATENT_DIM)
+            decoder_embedding = Embedding(self.num_words_output, self.config.LATENT_DIM, name='decoder_embedding')
             decoder_inputs_x = decoder_embedding(decoder_inputs_placeholder)
             
             style_context = Concatenate(axis=-1)
@@ -194,6 +197,7 @@ class Seq2SeqAdvStyleModel():
             decoder_lstm = LSTM(self.config.LATENT_DIM,
                                 return_sequences=True,
                                 return_state=True,
+                                name='decoder_lstm'
                                 # dropout=0.5 # dropout not available on gpu
                                 )
             decoder_outputs, _, _ = decoder_lstm(style_context_x,
@@ -206,7 +210,7 @@ class Seq2SeqAdvStyleModel():
             # )
 
             # final dense layer for predictions
-            decoder_dense = Dense(self.num_words_output, activation='softmax')
+            decoder_dense = Dense(self.num_words_output, activation='softmax',name='decoder_dense')
             decoder_outputs = decoder_dense(decoder_outputs)
 
             return decoder_inputs_placeholder, style_inputs_placeholder, decoder_outputs
@@ -285,26 +289,22 @@ class Seq2SeqAdvStyleModel():
         # Save model
         self.model.save(SAVE_PATH)
 
-    def predict_build_model(self, LOAD_PATH):
-        # load model
-        self.model = load_model(LOAD_PATH)
+    def load_encoder(self):
 
-        encoder_inputs_placeholder = self.model.input[0]
-        encoder_outputs, h, c = self.model.layers[4].output
+        layer_names = {layer.name: i for i,layer in enumerate(self.model.layers)}
+
+        encoder_inputs_placeholder = self.model.input[layer_names['encoder_input']]
+        encoder_outputs, h, c = self.model.layers[layer_names['encoder_lstm']].output
         encoder_states = [h, c]
-        decoder_embedding = self.model.layers[3]
-        decoder_lstm = self.model.layers[5]
-        decoder_dense = self.model.layers[6]        
+        return encoder_inputs_placeholder, encoder_states
 
-        # we need to create another model
-        # that can take in the RNN state and previous word as input
-        # and accept a T=1 sequence.
+    def load_decoder(self):
 
-        # The encoder will be stand-alone
-        # From this we will get our initial decoder hidden state
-        
-        ##### build the model #####
-        self.encoder_model = Model(encoder_inputs_placeholder, encoder_states)
+        layer_names = {layer.name: i for i,layer in enumerate(self.model.layers)}
+
+        decoder_embedding = self.model.layers[layer_names['decoder_embedding']]
+        decoder_lstm = self.model.layers[layer_names['decoder_lstm']]
+        decoder_dense = self.model.layers[layer_names['decoder_dense']]        
 
         decoder_state_input_h = Input(shape=(self.config.LATENT_DIM,))
         decoder_state_input_c = Input(shape=(self.config.LATENT_DIM,))
@@ -328,6 +328,25 @@ class Seq2SeqAdvStyleModel():
         # decoder_states = [h] # gru
         decoder_outputs = decoder_dense(decoder_outputs)
 
+        return decoder_inputs_single, decoder_states_inputs, decoder_outputs, decoder_states
+        
+
+    def predict_build_model(self, LOAD_PATH):
+        # load model
+        self.model = load_model(LOAD_PATH)
+        encoder_inputs_placeholder, encoder_states = self.load_encoder()
+        decoder_inputs_single, decoder_states_inputs, decoder_outputs, decoder_states = self.load_decoder()
+        
+        # we need to create another model
+        # that can take in the RNN state and previous word as input
+        # and accept a T=1 sequence.
+
+        # The encoder will be stand-alone
+        # From this we will get our initial decoder hidden state
+        
+        ##### build the model #####
+        self.encoder_model = Model(encoder_inputs_placeholder, encoder_states)
+        
         # The sampling model
         # inputs: y(t-1), h(t-1), c(t-1)
         # outputs: y(t), h(t), c(t)
