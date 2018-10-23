@@ -16,6 +16,8 @@ This is a project to learn different s2s models based on Keras Functional API
 - seq2seq auto-encoder model with adversarial network and style embedding (Done)
 - pointer network model (Work-in-Progress)
 - pointer-generator model (Work-in-Progress)
+- transformer model (Work-in-Progress)
+- bert model (Work-in-Progress)
 
 ## Usage
 ~~~
@@ -27,12 +29,17 @@ python -m bin.seq2seq_model_test
 python -m bin.seq2seq_attn_model_train
 python -m bin.seq2seq_attn_model_test
 
-# For seq2seq auto-encoder model with adversarial network and style embedding  (work-in-progress)
+# For seq2seq auto-encoder model with adversarial network and style embedding
 python -m bin.seq2seq_adv_style_model_train
 python -m bin.seq2seq_adv_style_model_test
 ~~~
 
-### References
+### Code References
+- For base seq2seq: [Keras Blog](https://blog.keras.io/a-ten-minute-introduction-to-sequence-to-sequence-learning-in-keras.html)
+- For adversarial style embedding model: [Theano Implementation of Style Transfer](https://github.com/fuzhenxin/text_style_transfer)
+- For pointer network: [Old Version Keras Implementation (< v2.0)](https://github.com/keon/pointer-networks)
+
+### Paper References
 - [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215), 2014.
 - [Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation](https://arxiv.org/abs/1406.1078), 2014.
 - [Get To The Point: Summarization with Pointer-Generator Networks](https://arxiv.org/abs/1704.04368), 2017.
