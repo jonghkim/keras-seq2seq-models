@@ -1,11 +1,33 @@
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 import numpy as np
+import random
 import os, sys
 
 class DataHelper():
     def __init__(self, config):
         self.config = config
+
+    def create_txt_number_ordering(self, X_DATA_PATH, Y_DATA_PATH):
+        import numpy as np
+
+        n_examples = 10000
+        n_steps = 8
+
+        arange = 10
+
+        x_file = X_DATA_PATH
+        y_file = Y_DATA_PATH
+        
+        # no repeating numbers within a sequence
+        x = np.arange( arange ).reshape( 1, -1 ).repeat( n_examples, axis = 0 )
+        x = np.apply_along_axis( np.random.permutation, 1, x )
+        x = x[:,:n_steps]
+
+        y = np.argsort( x, axis = 1 )
+
+        np.savetxt( x_file, x, delimiter = ',', fmt = '%d' )
+        np.savetxt( y_file, y, delimiter = ',', fmt = '%d' )
 
     def read_txt_translation(self, DATA_PATH):
         # Where we will store the data

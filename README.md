@@ -9,6 +9,8 @@ This is a project to learn different s2s models based on Keras Functional API
     - get the data at: http://www.manythings.org/anki/
 - For adversarial style embedding model: Sentiment Review Dataset
     - get the data at: http://jmcauley.ucsd.edu/data/amazon/links.html
+- For pointer network model: Integer Sequence Ordering
+    - get the data generation code from: https://github.com/zygmuntz/pointer-networks-experiments/blob/master/generate_data.py
 
 ## Models
 - vanilla seq2seq model (Done)
@@ -21,23 +23,26 @@ This is a project to learn different s2s models based on Keras Functional API
 
 ## Usage
 ~~~
-# For vanilla seq2seq model
+# For vanilla seq2seq model: Solve Translation Problem
 python -m bin.seq2seq_model_train
 python -m bin.seq2seq_model_test
 
-# For seq2seq with attention mechanism model
+# For seq2seq with attention mechanism model: Solve Translation Problem
 python -m bin.seq2seq_attn_model_train
 python -m bin.seq2seq_attn_model_test
 
-# For seq2seq auto-encoder model with adversarial network and style embedding
+# For seq2seq auto-encoder model with adversarial network and style embedding: Solve Style Transfer Problem
 python -m bin.seq2seq_adv_style_model_train
 python -m bin.seq2seq_adv_style_model_test
+
+# For pointer network model (*Work-in-Progress*): Solve Interger Sequence Ordering Problem
+python -m bin.ptr_network_model_train
+python -m bin.ptr_network_model_test
 ~~~
 
 ### Code References
 - For base seq2seq: [Keras Blog](https://blog.keras.io/a-ten-minute-introduction-to-sequence-to-sequence-learning-in-keras.html)
 - For adversarial style embedding model: [Theano Implementation of Style Transfer](https://github.com/fuzhenxin/text_style_transfer)
-- For pointer network: [Old Version of Keras Implementation (< v2.0)](https://github.com/keon/pointer-networks)
 
 ### Paper References
 - [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215), 2014.

@@ -63,3 +63,20 @@ class AdvStyleConfig():
         arttribute = vars(self)
         arttribute = {k:v for k,v in arttribute.items() if not k.startswith("__")}
         return str(arttribute) 
+
+class PtrNetworkConfig():
+
+    MODE = "train"
+
+    BATCH_SIZE = 64
+    EPOCHS = 100
+    LATENT_DIM = 256
+    
+    NUM_SAMPLES = 700
+    
+    PREDICTION_BATCH_SIZE = 5
+    
+    def __repr__(self):
+        arttribute = vars(self)
+        arttribute = {k:v for k,v in arttribute.items() if not k.startswith("__")}
+        return str(arttribute) 
