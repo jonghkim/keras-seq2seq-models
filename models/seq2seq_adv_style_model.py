@@ -361,12 +361,9 @@ class Seq2SeqAdvStyleModel():
                 super(AdversarialLoss, self).__init__(**kwargs)
 
             def call(self, x, mask=None):
-                classifier_outputs = x[0]
-                log_classifier_outputs = K.log(classifier_outputs)
-                
-                adv_loss = multiply([classifier_outputs, log_classifier_outputs])
-                sum_adv_loss = K.sum(adv_loss)
-                self.add_loss(sum_adv_loss,x)
+                log_classifier_outputs = K.log(x)
+                adv_loss = K.sum(log_classifier_outputs)
+                self.add_loss(adv_loss,x)
                 
                 return adv_loss
 
