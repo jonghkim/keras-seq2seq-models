@@ -40,14 +40,26 @@ python -m bin.ptr_network_model_train
 python -m bin.ptr_network_model_test
 ~~~
 
-### Code References
+## Code References
 - For base seq2seq: [Keras Blog](https://blog.keras.io/a-ten-minute-introduction-to-sequence-to-sequence-learning-in-keras.html)
 - For adversarial style embedding model: [Theano Implementation of Style Transfer](https://github.com/fuzhenxin/text_style_transfer)
 
-### Paper References
+## Paper References
 - [Sequence to Sequence Learning with Neural Networks](https://arxiv.org/abs/1409.3215), 2014.
 - [Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation](https://arxiv.org/abs/1406.1078), 2014.
 - [Get To The Point: Summarization with Pointer-Generator Networks](https://arxiv.org/abs/1704.04368), 2017.
 - [Style Transfer in Text: Exploration and Evaluation](https://arxiv.org/abs/1711.06861), 2017.
 - [Attention Is All You Need](https://arxiv.org/abs/1706.03762), 2017.
 - [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/abs/1810.04805), 2018.
+
+## For Citation
+```
+@misc{jonghkim,
+  author = {Jongho Kim},
+  title = {keras-seq2seq-models},
+  year = {2018},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/jonghkim/keras-seq2seq-model}},
+}
+```
