@@ -2,7 +2,7 @@
 
 *Work-in-Progress*
 
-This is a project to learn different s2s models based on Keras Functional API
+The purpose of this project is to explore different s2s models based on Keras Functional API
 
 ## Data
 - For seq2seq model & seq2seq attn model: Translation Dataset 
