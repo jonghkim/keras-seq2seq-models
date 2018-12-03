@@ -29,6 +29,7 @@ class Seq2SeqAdvStyleModel():
         self.decoder_inputs =decoder_inputs
         self.decoder_targets = decoder_targets
 
+        self.styles = styles
 
         self.max_len_input = max_len_input
         self.max_len_target = max_len_target
@@ -41,44 +42,90 @@ class Seq2SeqAdvStyleModel():
         self.idx2word_eng = {v:k for k, v in self.word2idx_inputs.items()}
         self.idx2word_trans = {v:k for k, v in self.word2idx_outputs.items()}
 
-        # create targets, since we cannot use sparse
-        # categorical cross entropy when we have sequences
-        self.decoder_targets_one_hot = np.zeros((
-                                                len(self.encoder_inputs),
+        self.steps_per_epoch = int(len(self.encoder_inputs)/self.config.BATCH_SIZE)
+
+        print('---- Set Data Finished ----')
+
+    def batch_get_input(self, idx, batch_size):
+        batch_encoder_inputs = self.encoder_inputs[idx:idx+batch_size]
+        batch_decoder_inputs = self.decoder_inputs[idx:idx+batch_size]
+
+        if self.config.ADVERSARIAL == False:
+            batch_x = [batch_encoder_inputs, batch_decoder_inputs]
+
+        elif self.config.ADVERSARIAL == True:
+            if self.config.STYLE_TRANSFER ==False:
+                batch_x = [batch_encoder_inputs, batch_decoder_inputs]
+
+            elif self.config.STYLE_TRANSFER ==True:
+                # assign the values
+
+                batch_style_inputs = np.zeros((
+                                                batch_size,
                                                 self.max_len_target,
-                                                self.num_words_output
                                             ),
-                                            dtype='float32'
+                                        dtype='float32'
                                         )
 
+                for i, d in enumerate(self.styles[idx:idx+batch_size]):
+                    batch_style_inputs[i,:] = d        
+
+                batch_x = [batch_encoder_inputs, batch_decoder_inputs, batch_style_inputs]
+
+        return batch_x
+                
+    def batch_get_output(self, idx, batch_size):
+        # create targets, since we cannot use sparse
+        # categorical cross entropy when we have sequences
+        batch_decoder_targets_one_hot = np.zeros((
+                                                    batch_size,
+                                                    self.max_len_target,
+                                                    self.num_words_output
+                                                ),
+                                                dtype='float32'
+                                            )
         # assign the values
-        for i, d in enumerate(self.decoder_targets):
+        for i, d in enumerate(self.decoder_targets[idx:idx+batch_size]):
             for t, word in enumerate(d):
-                self.decoder_targets_one_hot[i, t, word] = 1
+                batch_decoder_targets_one_hot[i, t, word] = 1
 
-
-        self.style_targets_one_hot = np.zeros((
-                                                len(self.encoder_inputs),
+        if self.config.ADVERSARIAL == False:
+            batch_y = batch_decoder_targets_one_hot
+            
+        elif self.config.ADVERSARIAL == True:
+            batch_style_targets_one_hot = np.zeros((
+                                                batch_size,
                                                 self.config.STYLE_NUM
                                             ),
                                         dtype='float32'    
                                         )
 
-        # assign the values
-        for i, d in enumerate(styles):
-            self.style_targets_one_hot[i, d] = 1
+            for i, d in enumerate(self.styles[idx:idx+batch_size]):
+                batch_style_targets_one_hot[i, d] = 1
 
-        self.style_inputs = np.zeros((
-                                        len(self.encoder_inputs),
-                                        self.max_len_target,
-                                    ),
-                                dtype='float32'
-                                )
+            batch_zero_like_loss = np.random.randn(batch_size,1)
 
-        for i, d in enumerate(styles):
-            self.style_inputs[i,:] = d
+            if self.config.STYLE_TRANSFER ==False:
+                batch_y = [batch_decoder_targets_one_hot, batch_style_targets_one_hot, batch_zero_like_loss]
 
-        print('---- Set Data Finished ----')
+            elif self.config.STYLE_TRANSFER ==True:
+                batch_y = [batch_decoder_targets_one_hot, batch_style_targets_one_hot, batch_zero_like_loss]
+
+        return batch_y
+
+    def batch_generator(self):
+        idx = 0
+        max_idx = len(self.encoder_inputs)
+
+        while True:
+            if (idx+self.config.BATCH_SIZE) > max_idx:
+                idx =0
+
+            batch_size = len(self.encoder_inputs[idx:idx+self.config.BATCH_SIZE])
+            batch_x = self.batch_get_input(idx, batch_size)
+            batch_y = self.batch_get_output(idx, batch_size)
+            idx = idx + batch_size
+            yield(batch_x, batch_y)
 
     def set_embedding_matrix(self, embedding_matrix):
         self.embedding_matrix = embedding_matrix
@@ -257,31 +304,28 @@ class Seq2SeqAdvStyleModel():
     
     def train_model(self):
         if self.config.ADVERSARIAL == False:
-            r = self.model.fit(
-                                [self.encoder_inputs, self.decoder_inputs], self.decoder_targets_one_hot,
-                                batch_size=self.config.BATCH_SIZE,
-                                epochs=self.config.EPOCHS,
-                                validation_split=0.2,
-                            )
+            r = self.model.fit_generator(generator=self.batch_generator(),
+                    epochs=self.config.EPOCHS,
+                    steps_per_epoch=self.steps_per_epoch,
+                    verbose=1,                    
+                    use_multiprocessing=False,
+                    workers=1)
 
         elif self.config.ADVERSARIAL == True:
             if self.config.STYLE_TRANSFER ==False:
-                r = self.model.fit(
-                                [self.encoder_inputs, self.decoder_inputs], 
-                                [self.decoder_targets_one_hot, self.style_targets_one_hot, 
-                                np.random.randn(self.decoder_targets_one_hot.shape[0],1)],
-                                batch_size=self.config.BATCH_SIZE,
-                                epochs=self.config.EPOCHS,
-                                validation_split=0.2,
-                                )
+                r = self.model.fit_generator(generator=self.batch_generator(),
+                        epochs=self.config.EPOCHS,
+                        steps_per_epoch=self.steps_per_epoch,
+                        verbose=1,                    
+                        use_multiprocessing=False,
+                        workers=1)
             elif self.config.STYLE_TRANSFER ==True:
-                r = self. model.fit(
-                                [self.encoder_inputs, self.decoder_inputs, self.style_inputs], 
-                                [self.decoder_targets_one_hot, self.style_targets_one_hot, np.random.randn(self.decoder_targets_one_hot.shape[0],1)],
-                                batch_size=self.config.BATCH_SIZE,
-                                epochs=self.config.EPOCHS,
-                                validation_split=0.2,
-                                )
+                r = self.model.fit_generator(generator=self.batch_generator(),
+                    epochs=self.config.EPOCHS,
+                    steps_per_epoch=self.steps_per_epoch,
+                    verbose=1,                    
+                    use_multiprocessing=False,
+                    workers=1)
                                 
         print('---- Train Model Finished ----')
 
@@ -411,32 +455,47 @@ class Seq2SeqAdvStyleModel():
                                 [decoder_outputs] + decoder_states
                                 )
 
-    def decode_sequence(self, input_seqs):
+    def decode_sequence(self, input_seqs, input_styles):
+        
+        # it devised for the end case of input_seqs
+        batch_size = len(input_seqs)
+
         # Generate empty target sequence of length 1.
         if self.config.STYLE_TRANSFER == False:
             # Encode the input as state vectors.            
             states_values = self.encoder_model.predict(input_seqs)
-            target_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE, 1))
+            target_seqs = np.zeros((batch_size, 1))
             # Populate the first character of target sequence with the start character.
             # NOTE: tokenizer lower-cases all words
-            for i in range(self.config.PREDICTION_BATCH_SIZE):
+            for i in range(batch_size):
                 target_seqs[i, 0] = self.word2idx_outputs['<sos>']
 
             # Create the translation
-            output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE)]
+            output_sentences = [[] for _ in range(batch_size)]
 
         elif self.config.STYLE_TRANSFER == True:
-            input_seqs = np.repeat(input_seqs, self.config.STYLE_NUM, axis=0)
-            states_values = self.encoder_model.predict(input_seqs)
+            input_seqs = np.repeat(input_seqs, 2, axis=0)
+            input_styles = np.repeat(input_styles, 2, axis=0)
 
-            target_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM, 1))
-            style_seqs = np.zeros((self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM, 1))
+            target_seqs = np.zeros((batch_size*2, 1))
+            style_seqs = np.zeros((batch_size*2, 1))
 
-            for i in range(self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM):
+            for i in range(batch_size*2):
                 target_seqs[i, 0] = self.word2idx_outputs['<sos>']
-                style_seqs[i, 0] = i%self.config.STYLE_NUM
-            
-            output_sentences = [[] for _ in range(self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM)]
+                
+                if (i%2) == 0:
+                    if (input_styles[i][0]%2)==0:
+                        style_seqs[i, 0] = input_styles[i][0]
+                    else:
+                        style_seqs[i, 0] = input_styles[i][0] - 1                        
+                else:
+                    if (input_styles[i][0]%2)==0:
+                        style_seqs[i, 0] = input_styles[i][0] + 1
+                    else:
+                        style_seqs[i, 0] = input_styles[i][0]
+
+            output_sentences = [[] for _ in range(batch_size*2)]
+            states_values = self.encoder_model.predict(input_seqs)
 
         # if we get this we break
         eos = self.word2idx_outputs['<eos>']
@@ -463,54 +522,109 @@ class Seq2SeqAdvStyleModel():
                 break
 
             if self.config.STYLE_TRANSFER == False:
-                for i in range(self.config.PREDICTION_BATCH_SIZE):
+                for i in range(batch_size):
                     word = ''
                     if (idxs[i] > 0) and (idxs[i] !=eos):
                         word = self.idx2word_trans[idxs[i]]
                         output_sentences[i].append(word)
+                    else:
+                        output_sentences[i].append("<eos>")
                     # Update the decoder input
                     # which is just the word just generated
                     target_seqs[i, 0] = idxs[i]
             elif self.config.STYLE_TRANSFER == True:
-                for i in range(self.config.PREDICTION_BATCH_SIZE*self.config.STYLE_NUM):
+                for i in range(batch_size*2):
                     word = ''
                     if (idxs[i] > 0) and (idxs[i] !=eos):
                         word = self.idx2word_trans[idxs[i]]
                         output_sentences[i].append(word)
                     # Update the decoder input
                     # which is just the word just generated
+                    else:
+                        output_sentences[i].append("<eos>")
                     target_seqs[i, 0] = idxs[i]
             # Update states
             states_values = [h, c]
             # states_value = [h] # gru
 
+        # <eos> masking
+        for i, output_sentence in enumerate(output_sentences):
+            if "<eos>" in output_sentence:
+                eos_idx = output_sentence.index("<eos>")
+                output_sentence = output_sentence[:min(eos_idx, self.max_len_target)]
+                output_sentences[i] = output_sentence
+
         return output_sentences
 
-    def predict(self, input_texts, target_texts):
+    def predict_sample(self, input_texts, target_texts):
         # map indexes back into real words
         # so we can view the results
-
         while True:
             # Do some test translations
-            i = np.random.choice(len(input_texts)-self.config.PREDICTION_BATCH_SIZE+1)
-            input_seqs = self.encoder_inputs[i:i+self.config.PREDICTION_BATCH_SIZE]
-            translations = self.decode_sequence(input_seqs)
-            for j in range(self.config.PREDICTION_BATCH_SIZE):
+            i = np.random.choice(len(input_texts)-self.config.PREDICT_SAMPLE_SIZE+1)
+            
+            batch_size = len(self.encoder_inputs[i:i+self.config.PREDICT_SAMPLE_SIZE])
+            batch_encoder_inputs = None
+            batch_style_inputs = None
+
+            if self.config.ADVERSARIAL == False:
+                [batch_encoder_inputs, _] = self.batch_get_input(i, batch_size)
+            elif self.config.ADVERSARIAL == True:
+                if self.config.STYLE_TRANSFER ==False:
+                   [batch_encoder_inputs, _] = self.batch_get_input(i, batch_size)
+                elif self.config.STYLE_TRANSFER ==True:
+                    [batch_encoder_inputs, _, batch_style_inputs] = self.batch_get_input(i, batch_size)
+
+            translations = self.decode_sequence(batch_encoder_inputs, batch_style_inputs)
+
+            for j in range(batch_size):
                 print('-')
-                print('Input:', input_texts[i+j])
+                print('*** Input:', input_texts[i+j], ' ***')
 
                 if self.config.STYLE_TRANSFER == False:
-                    print('Translation:', ' '.join(translations[j]))
+                    print('   Translation:', ' '.join(translations[j]))
                     print('Actual translation:', target_texts[i+j])
 
                 elif self.config.STYLE_TRANSFER == True:
-                    for k in range(self.config.STYLE_NUM):
-                        print('Translation to Style {}:'.format(str(k)), 
-                                ' '.join(translations[j*self.config.STYLE_NUM+k]))
+                    for k in range(2):
+                        if batch_style_inputs[j][0]%2 ==0:
+                            target_style = batch_style_inputs[j][0]+k
+                        else:
+                            target_style = batch_style_inputs[j][0]-1+k
 
-                    print('Actual styles:', self.style_inputs[i+j])
+                        print('   Translation to Style {}:'.format(str(target_style)), 
+                                ' '.join(translations[j*2+k]))
+
+                    print('Actual styles:', batch_style_inputs[j][0])
                     print('Actual translation:', target_texts[i+j])
 
             ans = input("Continue? [Y/n]")
             if ans and ans.lower().startswith('n'):
                 break
+
+    def predict(self, input_texts, target_texts):
+        
+        translations_results = []
+        
+        step = 0
+
+        for i in range(0, len(input_texts), self.config.PREDICTION_BATCH_SIZE):
+            if step < (i/len(input_texts)):
+                print("Progrees: ", i," / ", len(input_texts))
+                step = step+0.05
+            batch_size = len(self.encoder_inputs[i:i+self.config.PREDICTION_BATCH_SIZE])
+            batch_encoder_inputs = None
+            batch_style_inputs = None
+
+            if self.config.ADVERSARIAL == False:
+                [batch_encoder_inputs, _] = self.batch_get_input(i, batch_size)
+            elif self.config.ADVERSARIAL == True:
+                if self.config.STYLE_TRANSFER ==False:
+                   [batch_encoder_inputs, _] = self.batch_get_input(i, batch_size)
+                elif self.config.STYLE_TRANSFER ==True:
+                    [batch_encoder_inputs, _, batch_style_inputs] = self.batch_get_input(i, batch_size)
+
+            translations = self.decode_sequence(batch_encoder_inputs, batch_style_inputs)
+            translations_results.extend(translations) 
+
+        return translations_results    
