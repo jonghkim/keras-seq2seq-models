@@ -43,7 +43,7 @@ if __name__ == "__main__":
     model.predict_build_model(LOAD_PATH)
     model.predict_sample(input_texts, target_texts)
 
-    ans = raw_input("Save Predictions? [Y/n]")
+    ans = str(input("Save Predictions? [Y/n]"))
     if ans and ans.lower().startswith('n'):
         sys.exit("**** Evaluation Done ****")
 

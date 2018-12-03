@@ -279,6 +279,6 @@ class Seq2SeqModel():
                 print('Translation:', ' '.join(translations[j]))
                 print('Actual translation:', target_texts[i+j])
 
-            ans = input("Continue? [Y/n]")
+            ans = str(input("Continue? [Y/n]"))
             if ans and ans.lower().startswith('n'):
                 break

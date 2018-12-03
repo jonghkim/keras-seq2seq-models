@@ -598,7 +598,7 @@ class Seq2SeqAdvStyleModel():
                     print('Actual styles:', batch_style_inputs[j][0])
                     print('Actual translation:', target_texts[i+j])
 
-            ans = input("Continue? [Y/n]")
+            ans = str(input("Continue? [Y/n]"))
             if ans and ans.lower().startswith('n'):
                 break
 
