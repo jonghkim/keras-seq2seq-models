@@ -10,8 +10,9 @@ class VanillaConfig():
     MAX_NUM_WORDS = 20000
     EMBEDDING_DIM = 100
 
-    PREDICTION_BATCH_SIZE = 5
-
+    PREDICTION_BATCH_SIZE = 32
+    PREDICT_SAMPLE_SIZE = 5
+    
     ENCODER_INPUT_MAX_LEN = 60
     DECODER_INPUT_MAX_LEN = 60
 
@@ -33,8 +34,9 @@ class AttnConfig():
     MAX_NUM_WORDS = 20000
     EMBEDDING_DIM = 100    
 
-    PREDICTION_BATCH_SIZE = 5
-    
+    PREDICTION_BATCH_SIZE = 32
+    PREDICT_SAMPLE_SIZE = 5
+
     ENCODER_INPUT_MAX_LEN = 60
     DECODER_INPUT_MAX_LEN = 60
 
@@ -84,8 +86,9 @@ class PtrNetworkConfig():
     
     NUM_SAMPLES = 700
     
-    PREDICTION_BATCH_SIZE = 5
-    
+    PREDICTION_BATCH_SIZE = 32
+    PREDICT_SAMPLE_SIZE = 5
+
     def __repr__(self):
         arttribute = vars(self)
         arttribute = {k:v for k,v in arttribute.items() if not k.startswith("__")}
