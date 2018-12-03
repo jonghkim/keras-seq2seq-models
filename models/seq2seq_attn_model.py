@@ -370,6 +370,6 @@ class Seq2SeqAttnModel():
                 print('Translation:', ' '.join(translations[j]))
                 print('Actual translation:', target_texts[i+j])
 
-            ans = str(input("Continue? [Y/n]"))
+            ans = raw_input("Continue? [Y/n]")
             if ans and ans.lower().startswith('n'):
                 break
