@@ -118,7 +118,11 @@ class DataHelper():
         print('Found %s unique input tokens.' % len(word2idx_inputs))
 
         # determine maximum length input sequence
-        max_len_input = max(len(s) for s in input_sequences)
+        if self.config.ENCODER_INPUT_MAX_LEN != None:
+            max_len_input = self.config.ENCODER_INPUT_MAX_LEN
+        else:
+            max_len_input = max(len(s) for s in input_sequences)
+
 
         # tokenize the outputs
         # don't filter out special characters
@@ -137,7 +141,10 @@ class DataHelper():
         num_words_output = len(word2idx_outputs) + 1
 
         # determine maximum length output sequence
-        max_len_target = max(len(s) for s in target_sequences)
+        if self.config.ENCODER_INPUT_MAX_LEN != None:
+            max_len_target = max(len(s) for s in target_sequences)
+        else:
+            max_len_target = self.config.DECODER_INPUT_MAX_LEN
 
         # pad the sequences
         encoder_inputs = pad_sequences(input_sequences, maxlen=max_len_input)

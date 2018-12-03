@@ -12,6 +12,9 @@ class VanillaConfig():
 
     PREDICTION_BATCH_SIZE = 5
 
+    ENCODER_INPUT_MAX_LEN = 60
+    DECODER_INPUT_MAX_LEN = 60
+
     def __repr__(self):
         arttribute = vars(self)
         arttribute = {k:v for k,v in arttribute.items() if not k.startswith("__")}
@@ -32,6 +35,9 @@ class AttnConfig():
 
     PREDICTION_BATCH_SIZE = 5
     
+    ENCODER_INPUT_MAX_LEN = 60
+    DECODER_INPUT_MAX_LEN = 60
+
     def __repr__(self):
         arttribute = vars(self)
         arttribute = {k:v for k,v in arttribute.items() if not k.startswith("__")}
@@ -58,6 +64,9 @@ class AdvStyleConfig():
     STYLE_DIM = 256
     
     PREDICTION_BATCH_SIZE = 5
+
+    ENCODER_INPUT_MAX_LEN = 60
+    DECODER_INPUT_MAX_LEN = 60
 
     def __repr__(self):
         arttribute = vars(self)
