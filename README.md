@@ -1,7 +1,5 @@
 # keras-seq2seq-models
 
-*Work-in-Progress*
-
 The purpose of this project is to explore different s2s models based on Keras Functional API
 
 ## Data
